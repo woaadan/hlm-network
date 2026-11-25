@@ -1,0 +1,8 @@
+﻿__pycache__/
+*.pyc
+.pytest_cache/
+_s*.png
+_check.js
+_t1.json
+_ctext.html
+

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>红楼梦人物网络 · 多模态分析</title>
+<style>
+:root{
+  --bg:#0e1014; --bg2:#14171d; --card:#1a1e26; --line:#2a303b;
+  --fg:#e9e3d5; --dim:#9aa3b2; --gold:#c8a96a; --red:#b03a2e; --blue:#4f81bd;
+  --green:#7fa86a; --purple:#7d5ba6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+  font-family:"Songti SC","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
+  line-height:1.8;-webkit-font-smoothing:antialiased}
+a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(200,169,106,.3)}
+a:hover{border-bottom-color:var(--gold)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+header{position:relative;padding:86px 0 54px;text-align:center;
+  background:radial-gradient(ellipse at 50% 0%,#20242d 0%,#0e1014 62%)}
+header .seal{display:inline-block;width:66px;height:66px;line-height:66px;border:2px solid var(--red);
+  color:var(--red);font-size:26px;letter-spacing:2px;margin-bottom:22px;border-radius:4px;
+  transform:rotate(-3deg)}
+h1{font-size:clamp(30px,4.6vw,52px);margin:0 0 12px;letter-spacing:.16em;font-weight:400}
+.sub{color:var(--dim);font-size:15px;letter-spacing:.08em}
+.kpis{display:flex;flex-wrap:wrap;justify-content:center;gap:38px;margin-top:38px}
+.kpi b{display:block;font-size:30px;color:var(--gold);font-weight:400}
+.kpi span{font-size:12.5px;color:var(--dim);letter-spacing:.12em}
+nav{position:sticky;top:0;z-index:50;background:rgba(14,16,20,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;gap:22px;overflow-x:auto;padding:12px 22px;font-size:13.5px}
+nav a{color:var(--dim);border:none;white-space:nowrap;letter-spacing:.06em}
+nav a:hover,nav a.on{color:var(--gold)}
+section{scroll-margin-top:58px;padding:58px 0;border-bottom:1px solid rgba(42,48,59,.55)}
+h2{font-size:24px;font-weight:400;letter-spacing:.1em;margin:0 0 6px}
+h2 .num{color:var(--red);font-size:13px;letter-spacing:.2em;display:block;margin-bottom:8px}
+.lead{color:var(--dim);max-width:760px;margin-bottom:26px}
+h3{font-size:16.5px;font-weight:400;color:var(--gold);margin:26px 0 8px;letter-spacing:.06em}
+p{font-size:15px;color:#d7d1c4}
+.small{font-size:13px;color:var(--dim)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:18px 20px}
+.card b{color:var(--gold);font-weight:400}
+.card .big{font-size:26px;color:var(--fg);display:block;margin-bottom:4px}
+.card.smallp p{margin:6px 0 0;font-size:13.5px;color:var(--dim)}
+figure{margin:26px 0}
+figure img{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}
+figcaption{font-size:13px;color:var(--dim);margin-top:9px;line-height:1.7}
+#net-wrap{position:relative;background:#0b0d10;border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;height:min(76vh,720px)}
+canvas{display:block;width:100%;height:100%;cursor:grab}
+canvas.drag{cursor:grabbing}
+.panel{position:absolute;top:14px;left:14px;background:rgba(20,23,29,.93);border:1px solid var(--line);
+  border-radius:9px;padding:12px 14px;font-size:12.5px;width:206px;backdrop-filter:blur(6px)}
+.panel label{display:flex;align-items:center;gap:7px;color:#c9c3b6;cursor:pointer;margin:4px 0}
+.panel input[type=checkbox]{accent-color:#c8a96a}
+.panel .row{display:flex;gap:6px;margin-top:9px}
+.panel input[type=range]{width:100%;accent-color:#c8a96a}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#c9c3b6}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+#search{width:100%;background:#0e1014;border:1px solid var(--line);color:var(--fg);
+  border-radius:6px;padding:6px 8px;font-size:12.5px;margin-top:8px;font-family:inherit}
+#detail{position:absolute;top:14px;right:14px;width:246px;background:rgba(20,23,29,.95);
+  border:1px solid var(--line);border-radius:9px;padding:14px;display:none;backdrop-filter:blur(6px)}
+#detail img{width:100%;border-radius:6px;margin-bottom:10px;max-height:230px;object-fit:cover}
+#detail h4{margin:0;font-size:19px;font-weight:400;letter-spacing:.06em}
+#detail .meta{font-size:12px;color:var(--dim);margin-top:4px}
+#detail table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+#detail td{padding:3px 0;border-bottom:1px solid rgba(42,48,59,.7)}
+#detail td:last-child{text-align:right;color:var(--gold)}
+#detail .close{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--dim);font-size:16px}
+.hint{position:absolute;bottom:10px;left:14px;font-size:11.5px;color:#5d6572}
+table.data{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
+table.data th{text-align:left;color:var(--gold);font-weight:400;border-bottom:1px solid var(--line);
+  padding:8px 10px;letter-spacing:.05em}
+table.data td{padding:8px 10px;border-bottom:1px solid rgba(42,48,59,.5);color:#cfc9bc;vertical-align:top}
+table.data tr:hover td{background:rgba(255,255,255,.02)}
+code{background:#151a21;padding:1.5px 6px;border-radius:4px;font-size:13px;color:#d8c7a0;
+  font-family:"JetBrains Mono",Consolas,monospace}
+pre{background:#0b0e12;border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;
+  font-size:12.5px;color:#cfc9bc}
+blockquote{border-left:2px solid var(--red);margin:18px 0;padding:2px 0 2px 16px;color:#cfc9bc;
+  font-size:14.5px}
+footer{padding:44px 0 60px;color:var(--dim);font-size:13px;text-align:center}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border:1px solid var(--line);
+  border-radius:99px;color:var(--dim);margin-right:6px}
+@media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}
+  #detail{width:200px}#net-wrap{height:70vh}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="seal">红</div>
+    <h1>红楼梦人物网络</h1>
+    <div class="sub">从 188 条人工关系，到亲属—主仆—社会—文本四层可计算网络</div>
+    <div class="kpis">
+      <div class="kpi"><b>179</b><span>人物</span></div>
+      <div class="kpi"><b>348</b><span>关系边</span></div>
+      <div class="kpi"><b>1380</b><span>同场共现</span></div>
+      <div class="kpi"><b>120</b><span>回全文</span></div>
+      <div class="kpi"><b>145</b><span>可确认剧照</span></div>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#clean">01 清洗</a><a href="#graph">02 交互网络</a><a href="#struct">03 结构</a>
+  <a href="#comm">04 社群</a><a href="#text">05 文本</a><a href="#time">06 时序</a>
+  <a href="#visual">07 图像</a><a href="#method">08 方法</a>
+</div></nav>
+
+<section id="clean"><div class="wrap">
+  <h2><span class="num">01 / DATA CLEANING</span>先把数据洗干净</h2>
+  <p class="lead">原始数据集标着“待清洗”，确实名副其实：179 人里 117 人没有性别、133 人身份“未标注”、
+  75 人与关系网络完全断开、180 张图有 20 组是同一张；关系表里还有把惜春记成贾珍之女这类世系错误。
+  下面每一类问题都给出了判定规则与处理结果。</p>
+
+  <div class="grid g4">
+    <div class="card smallp"><span class="big">117</span><b>性别缺失</b>
+      <p>按亲属谓词（父/母/子/女）+ 主仆谓词（丫鬟/小厮）+ 原文考订逐条补齐，现 179/179 完整。</p></div>
+    <div class="card smallp"><span class="big">133</span><b>身份未标注</b>
+      <p>重建为 主子／妾室／仆役／宗族／客卿／外人 六类，另加“身份细分”（丫鬟、小厮、管家、优伶…）。</p></div>
+    <div class="card smallp"><span class="big">75</span><b>网络孤岛</b>
+      <p>原文“在关系网=否”。补 23 条文本可证的缺边（平儿、紫鹃、司棋、待书、抱琴…），59 人可由同场共现接回。</p></div>
+    <div class="card smallp"><span class="big">20</span><b>同图多人的图源冲突</b>
+      <p>按 MD5 归并，一人一图；无法判定归属的整组标“图源冲突”，不硬凑。</p></div>
+  </div>
+
+  <h3>关系谓词规范化</h3>
+  <p>原表用了 70 余种谓词，其中大量是同义异写：<code>丫环 / 丫头 / 大丫头 / 大丫环 / 陪房丫头</code> 一律归并为
+  <code>丫鬟</code>；<code>父→父亲</code>、<code>好兄弟/好朋友→朋友</code>、<code>相好/暧昧→私情</code>。
+  归并后再按性别与语义自动生成互逆边（父亲↔儿子/女儿、妻↔丈夫、丫鬟↔主人），
+  使“已配对”由原表的 94/188 提升到 293/348。</p>
+
+  <h3>世系纠错</h3>
+  <table class="data">
+    <tr><th>原表</th><th>问题</th><th>订正</th></tr>
+    <tr><td>贾珍 —父亲→ 贾惜春<br>尤氏 —母亲→ 贾惜春</td><td>惜春是贾敬之女、贾珍之妹，尤氏是其嫂</td>
+        <td>贾敬 —父亲→ 贾惜春；尤氏 —嫂子→ 贾惜春</td></tr>
+    <tr><td>贾迎春 —妻→ 孙绍祖</td><td>方向反了</td><td>贾迎春 —丈夫→ 孙绍祖</td></tr>
+    <tr><td>邢岫烟 —妻→ 薛蝌</td><td>方向反了</td><td>邢岫烟 —丈夫→ 薛蝌</td></tr>
+    <tr><td>史湘云 —孙女→ 贾母</td><td>湘云是贾母的侄孙女</td><td>史湘云 —侄孙女→ 贾母</td></tr>
+    <tr><td>琪官、尤老娘 各立一行</td><td>分别是蒋玉菡的艺名、尤氏继母</td><td>合并实体，保留别名</td></tr>
+  </table>
+
+  <figure><img src="figures/fig9_evidence.png" alt="关系边的文本证据">
+  <figcaption>把关系边放回 120 回全文里检验：<b>21 条边在全书里从未同回出现</b>，中位数 11 回。
+  低频者多为“间接关系”或误标（如把主仆写成亲属），这为后续人工复核提供了排序依据。</figcaption></figure>
+</div></section>
+
+<section id="graph"><div class="wrap">
+  <h2><span class="num">02 / INTERACTIVE GRAPH</span>把它转起来</h2>
+  <p class="lead">节点颜色=身份，大小=所选指标；边为关系三层。勾选“文本同场”可叠加第四层。
+  点击任意人物查看画像与指标，滚轮缩放、拖拽移动。</p>
+  <div id="net-wrap">
+    <canvas id="cv"></canvas>
+    <div class="panel">
+      <div style="color:#c8a96a;margin-bottom:6px">图层</div>
+      <label><input type="checkbox" class="rel" value="亲属关系" checked><span class="dot" style="background:#b03a2e"></span>亲属关系</label>
+      <label><input type="checkbox" class="rel" value="主仆关系" checked><span class="dot" style="background:#4f81bd"></span>主仆关系</label>
+      <label><input type="checkbox" class="rel" value="社会关系" checked><span class="dot" style="background:#7fa86a"></span>社会关系</label>
+      <label><input type="checkbox" id="showText"><span class="dot" style="background:#4a5260"></span>文本同场共现</label>
+      <div style="color:#c8a96a;margin:12px 0 4px">节点大小</div>
+      <div class="row">
+        <select id="metric" style="width:100%;background:#0e1014;color:#e9e3d5;border:1px solid #2a303b;border-radius:6px;padding:5px;font-size:12px;font-family:inherit">
+          <option value="d">关系度数</option><option value="b">介数中心性</option>
+          <option value="t">文本共现度</option><option value="k">k-core</option>
+        </select>
+      </div>
+      <div style="color:#c8a96a;margin:12px 0 4px">标签密度</div>
+      <input type="range" id="lab" min="0" max="40" value="14">
+      <input id="search" placeholder="搜索人物…">
+      <div style="margin-top:10px"><span class="chip"><span class="dot" style="background:#b03a2e"></span>主子</span>
+      <span class="chip"><span class="dot" style="background:#d68910"></span>妾室</span>
+      <span class="chip"><span class="dot" style="background:#2e86c1"></span>仆役</span>
+      <span class="chip"><span class="dot" style="background:#16a085"></span>客卿</span>
+      <span class="chip"><span class="dot" style="background:#7f8c8d"></span>外人</span></div>
+    </div>
+    <div id="detail"><span class="close" id="closeD">×</span><div id="dbody"></div></div>
+    <div class="hint">拖拽移动 · 滚轮缩放 · 点击查看人物卡</div>
+  </div>
+</div></section>
+
+<section id="struct"><div class="wrap">
+  <h2><span class="num">03 / STRUCTURE</span>谁不可替代</h2>
+  <p class="lead">关系网络极稀疏（密度 0.0102），109 人的巨连通块却只有 9 跳直径——一个“小世界”。
+  度、介数、PageRank 三种口径给出的答案并不相同，这正是多层网络有意思的地方。</p>
+  <figure><img src="figures/fig1_relation_network.png" alt="关系网络">
+  <figcaption>巨连通块 109 人、159 条关系，按 Louvain 社群着色。可以看到荣国府一侧几乎被王夫人、贾母、
+  贾政、宝玉切成若干“院”，宁国府（绿）与薛家（橙）各自成团。</figcaption></figure>
+  <div class="grid g3">
+    <div class="card smallp"><b>贾宝玉</b><p>度 28、介数 0.214、有效规模 26.5、约束度 0.063——他是唯一横跨亲属、主仆、社会三层的枢纽，
+    “结构洞”几乎全部经由他打通。</p></div>
+    <div class="card smallp"><b>王夫人</b><p>度 13 却介数第二（0.087）。她连接的是“主子—仆役”过渡带（金钏、玉钏、彩云、周瑞家的），
+    是荣国府内务的实际路由。</p></div>
+    <div class="card smallp"><b>贾惜春</b><p>度只有 4，介数却排第四（0.048）。她与宁国府的血缘、与荣国府的居住、与佛门的归宿，
+    三重身份让她成为三块之间的“窄门”。</p></div>
+  </div>
+  <figure><img src="figures/fig3_centrality.png" alt="中心性">
+  <figcaption>三把尺子量同一个人：宝玉在三种口径下都第一；王熙凤 PageRank 低于贾母但介数接近，
+  说明她“影响大而路径短”；贾政度很高但介数偏低——他是“门面”而非“通道”。</figcaption></figure>
+  <figure><img src="figures/fig5_core_periphery.png" alt="核心边缘">
+  <figcaption>k-core 只有 3 层，说明这部小说的人物网络“薄而宽”：核心并非层层嵌套，而是一个扁平的核心圈
+  加大量依附其上的卫星人物。</figcaption></figure>
+</div></section>
+
+<section id="comm"><div class="wrap">
+  <h2><span class="num">04 / COMMUNITY</span>宗法结构的分形</h2>
+  <p class="lead">在关系网络上做 Louvain，得到 9 个社群、模块度 0.632。它们几乎逐个对应“房头”：
+  宁国府、薛家、凤姐—琏二房、王夫人—元春、贾政—赵姨娘、秦可卿—秦家、邢夫人—邢家，
+  以及被单独切出来的“怡红院系”。</p>
+  <figure><img src="figures/fig4_community_mansion.png" alt="社群与府邸">
+  <figcaption>左：社群 × 居所。注意“贾家荣国府”一列被切成 5 段——同一座府邸内部按“房”分裂；
+  右：各社群的等级构成，仆役占比高的社群（怡红院、凤姐院）恰恰是关系最密的地方。</figcaption></figure>
+  <blockquote>府邸只能解释 0.329（NMI），血缘解释 0.364。真正切分网络的不是“住在哪”，
+  而是“跟着谁吃饭”——宗法共同体的最小单位是“房”，不是“府”。</blockquote>
+  <p>另一个值得注意的现象：把同样的算法用在<b>文本同场网络</b>上，模块度只有 0.144。
+  也就是说，小说的“舞台”本身是高度整合的——宝玉几乎和所有人同场；而制度性的亲属/主仆关系才是
+  把这张舞台切成碎块的力量。<b>文本层的低模块度 × 关系层的高模块度</b>，正是“人情社会的表层”与
+  “宗法结构的里层”之间的落差。</p>
+</div></section>
+
+<section id="text"><div class="wrap">
+  <h2><span class="num">05 / TEXT LAYER</span>被表格漏掉的人</h2>
+  <p class="lead">原表 179 人里有 65 人没有任何关系边——包括平儿、紫鹃、司棋、待书、抱琴这些大丫鬟。
+  这不是她们不重要，而是编表时“只记主仆、不记丫鬟网络”。用 120 回全文的 400 字同场窗口重建后，
+  59 人可以接回主网。</p>
+  <figure><img src="figures/fig2_fused_network.png" alt="融合网络">
+  <figcaption>内圈＝原表已录入的 114 人；外环＝原表“关系网外”、但文本仍在场的 59 人，灰虚线指向其最强的同场伙伴。
+  外环里能认出宝玉的小厮（茗烟、锄药、扫红）、贾母的丫鬟（琥珀、翡翠、玻璃）、十二官与清客。</figcaption></figure>
+  <p>文本层还给出一个反直觉的结果：<b>丫鬟网络不是“星形”而是“链形”</b>。以袭人为例，她与宝玉的同场次数极高，
+  但与晴雯、麝月、秋纹的同场次数同样高——怡红院内部是一个近乎完全图的小团体，
+  宝玉只是其对外接口。这也解释了为什么“宝玉—袭人”在介数上并不突出：<i>捷径被内部稠密性抵消了</i>。</p>
+</div></section>
+
+<section id="time"><div class="wrap">
+  <h2><span class="num">06 / TIME</span>舞台从谁身上移开</h2>
+  <p class="lead">把 120 回切成 12 个十年块，重建每块的同场共现网络，能看到人物戏份的此消彼长：
+  袭人、晴雯在第 8 块（71–80 回）后急剧退场，紫鹃、王夫人在 81–100 回抬头，薛宝钗在最后两块回到中心。</p>
+  <figure><img src="figures/fig6_temporal.png" alt="时序">
+  <figcaption>上排：每回出场人数与内部共现密度，虚线为第 80 回。下：主要人物出场强度热图。
+  “抄检大观园”（74 回）之后，网络从“园中群像”退回到“府内家长”。</figcaption></figure>
+  <figure><img src="figures/fig7_authorship.png" alt="前后80回">
+  <figcaption>前 80 回与后 40 回的人物戏份高度连续：Spearman ρ=0.629，前 20 名重合 14 人。
+  这更像“同一舞台的延续”而非“另起炉灶”；但后 40 回确实有新面孔进入前列（妙玉、紫鹃、贾惜春、贾芸、邢夫人、雪雁）。
+  该指标只说明文本层面的连续性，<b>不足以单独判定作者归属</b>。</figcaption></figure>
+</div></section>
+
+<section id="visual"><div class="wrap">
+  <h2><span class="num">07 / IMAGE MODALITY</span>脸能不能解释位置</h2>
+  <p class="lead">178 张剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
+  结论有点扫兴但很诚实：<b>视觉特征与网络位置几乎不相关</b>（度—饱和度 r=0.024，度—亮度 r=-0.058）。</p>
+  <figure><img src="figures/fig8_visual_modality.png" alt="图像模态">
+  <figcaption>主子与仆役剧照的亮度、饱和度差异均不显著（Mann-Whitney p=0.5339 / 0.9053）；
+  唯一显著的是边缘密度（p=0.0208），可能来自构图景别而非身份。右图揭示真正的偏差：
+  <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子。</figcaption></figure>
+  <figure><img src="figures/fig10_persona_cards.png" alt="人物卡">
+  <figcaption>多模态人物卡：剧照（图像）＋ 度/介数（网络）＋ 出场回数（文本）。</figcaption></figure>
+  <p class="small">说明：原始图源分为 87 版剧照、工笔/绣像与带水印的网络图片三类，年代与风格不统一，
+  因此本页只做<b>低层视觉统计</b>，不据此推断人物形象。</p>
+</div></section>
+
+<section id="method"><div class="wrap">
+  <h2><span class="num">08 / METHOD</span>怎么复现</h2>
+  <div class="grid g2">
+    <div>
+      <h3>数据</h3>
+      <p class="small">原始三表 + 178 图（未改动，存 <code>data/raw/</code>）；全文来自公开的 120 回本
+      （<code>data/external/hlm_master.txt</code>，85 万字）；清洗与增补结果在 <code>data/processed/</code>，
+      人工考订明细在 <code>data/curation/person_curation.csv</code>，每一条都能追到依据。</p>
+      <h3>方法</h3>
+      <p class="small">人物抽取：别名词典 + 最长匹配 + 泛称（珍珠、琥珀、彩云…）上下文过滤；
+      共现：400 字滑动窗口（同场）与章回级（证据）两套；社区：Louvain（关系层）；
+      中心性：NetworkX；布局：自实现 ForceAtlas2，静态图与网页共用坐标。</p>
+    </div>
+    <div>
+      <h3>运行</h3>
+      <pre>pip install -r requirements.txt
+python scripts/02_clean.py     # 清洗＋增补
+python scripts/03_text.py      # 全文解析＋共现
+python scripts/04_images.py    # 图像去重＋特征
+python scripts/05_network.py   # 网络指标
+python scripts/06_figures.py   # 静态图
+python scripts/07_web.py       # 生成本页</pre>
+      <h3>局限</h3>
+      <p class="small">① 人物识别基于词典，别名遗漏会造成漏计；② 同场窗口是“阅读经验”的近似，
+      不是真的场景切分；③ 结局、部分关系为人工整理，依赖 120 回通行本；④ 图源冲突的 20 组只做了
+      “一人一图”收敛，未做真人识别。</p>
+    </div>
+  </div>
+  <p class="small" style="margin-top:22px">数据与代码：<a href="https://github.com/woaadan/hlm-network">GitHub</a> ·
+  原始数据：用户提供的《红楼梦》（部分数据、待清洗）数据集 · 全文：seeed 公开 120 回本 ·
+  图源：原数据集附带剧照。本页仅用于研究与教学。</p>
+</div></section>
+
+<footer><div class="wrap">
+  红楼梦人物网络 · 多模态分析　|　清洗 · 补全 · 网络分析 · 可视化　|　2026
+</div></footer>
+
+<script>
+const DATA = {"nodes":[{"id":"HLM-P001","n":"贾宝玉","r":"主子","c":0,"d":28,"b":0.2142,"t":106,"k":3,"h":"贾家荣国府","g":"男","al":"","f":"出家","ch":117,"img":"img/HLM-P001.jpg"},{"id":"HLM-P002","n":"贾政","r":"主子","c":6,"d":13,"b":0.0441,"t":64,"k":3,"h":"贾家荣国府","g":"男","al":"","f":"袭爵复职","ch":67,"img":"img/HLM-P002.jpg"},{"id":"HLM-P003","n":"王夫人","r":"主子","c":5,"d":13,"b":0.0869,"t":84,"k":3,"h":"贾家荣国府","g":"女","al":"王夫人","f":"","ch":105,"img":"img/HLM-P003.jpg"},{"id":"HLM-P004","n":"贾母","r":"主子","c":1,"d":15,"b":0.0683,"t":96,"k":3,"h":"贾家荣国府","g":"女","al":"史太君|老太太|老祖宗","f":"寿终","ch":117,"img":"img/HLM-P004.jpg"},{"id":"HLM-P005","n":"贾赦","r":"主子","c":1,"d":8,"b":0.0208,"t":37,"k":3,"h":"贾家荣国府","g":"男","al":"","f":"流放遇赦","ch":36,"img":"img/HLM-P005.jpg"},{"id":"HLM-P006","n":"林黛玉","r":"主子","c":1,"d":10,"b":0.0413,"t":66,"k":3,"h":"贾家荣国府","g":"女","al":"颦儿|潇湘妃子|林妹妹","f":"泪尽而逝","ch":88,"img":"img/HLM-P006.jpg"},{"id":"HLM-P007","n":"贾珍","r":"主子","c":2,"d":6,"b":0.0247,"t":56,"k":2,"h":"贾家宁国府","g":"男","al":"珍大爷","f":"流放遇赦","ch":56,"img":"img/HLM-P007.jpg"},{"id":"HLM-P008","n":"贾代善","r":"主子","c":1,"d":5,"b":0.02,"t":0,"k":3,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P008.jpg"},{"id":"HLM-P009","n":"贾珠","r":"主子","c":0,"d":5,"b":0.0055,"t":4,"k":3,"h":"贾家荣国府","g":"男","al":"","f":"","ch":6,"img":"img/HLM-P009.jpg"},{"id":"HLM-P010","n":"王熙凤","r":"主子","c":4,"d":8,"b":0.0408,"t":90,"k":3,"h":"贾家荣国府","g":"女","al":"凤姐|凤辣子|琏二奶奶","f":"病亡","ch":103,"img":"img/HLM-P010.jpg"},{"id":"HLM-P011","n":"薛姨妈","r":"主子","c":3,"d":5,"b":0.0264,"t":55,"k":2,"h":"薛家","g":"女","al":"姨妈","f":"守业","ch":65,"img":"img/HLM-P011.jpg"},{"id":"HLM-P012","n":"邢夫人","r":"主子","c":8,"d":6,"b":0.0288,"t":53,"k":3,"h":"贾家荣国府","g":"女","al":"","f":"存续","ch":49,"img":"img/HLM-P012.jpg"},{"id":"HLM-P013","n":"贾琏","r":"主子","c":4,"d":6,"b":0.0316,"t":63,"k":3,"h":"贾家荣国府","g":"男","al":"琏二爷|琏儿","f":"守业","ch":72,"img":"img/HLM-P013.jpg"},{"id":"HLM-P014","n":"贾敏","r":"主子","c":1,"d":5,"b":0.0041,"t":0,"k":3,"h":"林家","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P014.jpg"},{"id":"HLM-P015","n":"巧姐","r":"主子","c":4,"d":3,"b":0.0135,"t":29,"k":2,"h":"贾家荣国府","g":"女","al":"贾巧姐|大姐儿","f":"嫁周家","ch":22,"img":"img/HLM-P015.jpg"},{"id":"HLM-P016","n":"秦可卿","r":"主子","c":7,"d":4,"b":0.0161,"t":3,"k":2,"h":"贾家宁国府","g":"女","al":"可卿|蓉大奶奶","f":"病亡（天香楼）","ch":5,"img":"img/HLM-P016.jpg"},{"id":"HLM-P017","n":"薛宝钗","r":"主子","c":3,"d":5,"b":0.0412,"t":73,"k":2,"h":"贾家荣国府","g":"女","al":"蘅芜君|宝姐姐","f":"守寡","ch":101,"img":"img/HLM-P017.jpg"},{"id":"HLM-P018","n":"薛蟠","r":"主子","c":3,"d":5,"b":0.0395,"t":30,"k":2,"h":"薛家","g":"男","al":"呆霸王|薛大傻子","f":"获罪复赎","ch":29,"img":"img/HLM-P018.jpg"},{"id":"HLM-P019","n":"贾元春","r":"主子","c":5,"d":4,"b":0.0068,"t":24,"k":3,"h":"贾家荣国府","g":"女","al":"元妃|贤德妃","f":"薨逝","ch":23,"img":"img/HLM-P019.jpg"},{"id":"HLM-P020","n":"贾惜春","r":"主子","c":2,"d":4,"b":0.0477,"t":47,"k":2,"h":"贾家荣国府","g":"女","al":"藕榭|四姑娘","f":"出家","ch":53,"img":"img/HLM-P020.jpg"},{"id":"HLM-P021","n":"贾演","r":"主子","c":2,"d":3,"b":0.0083,"t":0,"k":2,"h":"贾家宁国府","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P021.jpg"},{"id":"HLM-P022","n":"赵姨娘","r":"妾室","c":6,"d":3,"b":0.0,"t":30,"k":3,"h":"贾家荣国府","g":"女","al":"","f":"暴病","ch":30,"img":"img/HLM-P022.jpg"},{"id":"HLM-P023","n":"史湘云","r":"主子","c":1,"d":4,"b":0.0044,"t":42,"k":3,"h":"贾家荣国府","g":"女","al":"枕霞旧友|云妹妹","f":"夫死守寡","ch":42,"img":"img/HLM-P023.jpg"},{"id":"HLM-P024","n":"尤氏","r":"主子","c":2,"d":2,"b":0.0127,"t":55,"k":2,"h":"贾家宁国府","g":"女","al":"珍大奶奶","f":"存续","ch":48,"img":"img/HLM-P024.jpg"},{"id":"HLM-P025","n":"李纨","r":"主子","c":0,"d":3,"b":0.002,"t":53,"k":2,"h":"贾家荣国府","g":"女","al":"稻香老农|宫裁","f":"凤冠霞帔后病亡","ch":61,"img":"img/HLM-P025.jpg"},{"id":"HLM-P026","n":"林如海","r":"外人","c":1,"d":2,"b":0.0,"t":2,"k":2,"h":"其他","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P026.jpg"},{"id":"HLM-P027","n":"秦钟","r":"外人","c":7,"d":3,"b":0.0319,"t":20,"k":2,"h":"其他","g":"男","al":"秦锺|鲸卿","f":"病亡","ch":12,"img":"img/HLM-P027.jpg"},{"id":"HLM-P028","n":"贾代化","r":"主子","c":2,"d":2,"b":0.002,"t":0,"k":2,"h":"贾家宁国府","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P028.jpg"},{"id":"HLM-P029","n":"贾探春","r":"主子","c":6,"d":6,"b":0.0105,"t":59,"k":3,"h":"贾家荣国府","g":"女","al":"蕉下客|三姑娘","f":"远嫁","ch":65,"img":"img/HLM-P029.jpg"},{"id":"HLM-P030","n":"贾敬","r":"主子","c":2,"d":3,"b":0.0201,"t":10,"k":2,"h":"贾家宁国府","g":"男","al":"","f":"","ch":6,"img":"img/HLM-P030.jpg"},{"id":"HLM-P031","n":"贾环","r":"主子","c":6,"d":3,"b":0.0,"t":44,"k":3,"h":"贾家荣国府","g":"男","al":"环儿|环三爷","f":"随母度日","ch":38,"img":"img/HLM-P031.jpg"},{"id":"HLM-P032","n":"贾蓉","r":"主子","c":7,"d":2,"b":0.0028,"t":44,"k":2,"h":"贾家宁国府","g":"男","al":"蓉哥儿","f":"捐官","ch":36,"img":"img/HLM-P032.jpg"},{"id":"HLM-P033","n":"尤二姐","r":"妾室","c":4,"d":3,"b":0.0135,"t":20,"k":2,"h":"贾家宁国府","g":"女","al":"二姐儿","f":"吞金自逝","ch":13,"img":"img/HLM-P033.jpg"},{"id":"HLM-P034","n":"玉钏儿","r":"仆役","c":5,"d":2,"b":0.0,"t":18,"k":2,"h":"贾家荣国府","g":"女","al":"白玉钏","f":"","ch":12,"img":"img/HLM-P034.jpg"},{"id":"HLM-P035","n":"甄士隐","r":"外人","c":3,"d":2,"b":0.0068,"t":4,"k":1,"h":"其他","g":"男","al":"甄费","f":"出家","ch":5,"img":"img/HLM-P035.jpg"},{"id":"HLM-P036","n":"秦邦业","r":"外人","c":7,"d":2,"b":0.0197,"t":5,"k":2,"h":"其他","g":"男","al":"秦业","f":"","ch":5,"img":"img/HLM-P036.jpg"},{"id":"HLM-P037","n":"薛宝琴","r":"主子","c":3,"d":2,"b":0.0,"t":36,"k":2,"h":"薛家","g":"女","al":"","f":"","ch":26,"img":"img/HLM-P037.jpg"},{"id":"HLM-P038","n":"薛蝌","r":"主子","c":3,"d":3,"b":0.0024,"t":19,"k":2,"h":"薛家","g":"男","al":"","f":"","ch":16,"img":"img/HLM-P038.jpg"},{"id":"HLM-P039","n":"贾源","r":"主子","c":2,"d":2,"b":0.0127,"t":0,"k":2,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":"img/HLM-P039.jpg"},{"id":"HLM-P040","n":"贾迎春","r":"主子","c":1,"d":6,"b":0.0328,"t":40,"k":3,"h":"贾家荣国府","g":"女","al":"菱洲|二姑娘","f":"遭虐而亡","ch":52,"img":"img/HLM-P040.jpg"},{"id":"HLM-P041","n":"贾雨村","r":"外人","c":5,"d":3,"b":0.0092,"t":20,"k":2,"h":"其他","g":"男","al":"贾化|时飞","f":"遇赦为民","ch":19,"img":"img/HLM-P041.jpg"},{"id":"HLM-P042","n":"邢岫烟","r":"主子","c":8,"d":3,"b":0.0086,"t":28,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":16,"img":"img/HLM-P042.jpg"},{"id":"HLM-P043","n":"金钏儿","r":"仆役","c":5,"d":2,"b":0.0,"t":18,"k":2,"h":"贾家荣国府","g":"女","al":"金钏","f":"投井","ch":13,"img":"img/HLM-P043.jpg"},{"id":"HLM-P044","n":"香菱","r":"妾室","c":3,"d":2,"b":0.0135,"t":27,"k":1,"h":"薛家","g":"女","al":"甄英莲|秋菱","f":"难产而亡","ch":23,"img":"img/HLM-P044.jpg"},{"id":"HLM-P045","n":"鸳鸯","r":"仆役","c":1,"d":3,"b":0.0068,"t":47,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"殉主自尽","ch":54,"img":"img/HLM-P045.jpg"},{"id":"HLM-P046","n":"冷子兴","r":"外人","c":5,"d":2,"b":0.0007,"t":1,"k":2,"h":"其他","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P046.jpg"},{"id":"HLM-P047","n":"刘姥姥","r":"外人","c":4,"d":2,"b":0.0068,"t":26,"k":1,"h":"其他","g":"女","al":"刘老老","f":"救巧姐","ch":10,"img":"img/HLM-P047.jpg"},{"id":"HLM-P048","n":"周瑞家的","r":"仆役","c":5,"d":2,"b":0.0049,"t":35,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":17,"img":"img/HLM-P048.jpg"},{"id":"HLM-P049","n":"夏金桂","r":"主子","c":3,"d":2,"b":0.0068,"t":0,"k":1,"h":"薛家","g":"女","al":"","f":"","ch":3,"img":"img/HLM-P049.jpg"},{"id":"HLM-P050","n":"妙玉","r":"客卿","c":0,"d":2,"b":0.0,"t":20,"k":2,"h":"贾家荣国府","g":"女","al":"槛外人","f":"被劫","ch":18,"img":"img/HLM-P050.jpg"},{"id":"HLM-P051","n":"尤三姐","r":"主子","c":4,"d":2,"b":0.0,"t":11,"k":2,"h":"贾家宁国府","g":"女","al":"三姐儿","f":"自刎","ch":7,"img":"img/HLM-P051.jpg"},{"id":"HLM-P052","n":"尤氏继母","r":"外人","c":4,"d":2,"b":0.0,"t":4,"k":2,"h":"其他","g":"女","al":"尤老娘","f":"","ch":2,"img":""},{"id":"HLM-P053","n":"晴雯","r":"仆役","c":0,"d":2,"b":0.0068,"t":40,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"病亡","ch":43,"img":"img/HLM-P053.jpg"},{"id":"HLM-P054","n":"李嬷嬷","r":"仆役","c":0,"d":2,"b":0.0,"t":8,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":7,"img":"img/HLM-P054.jpg"},{"id":"HLM-P055","n":"林红玉","r":"仆役","c":-1,"d":2,"b":0.0001,"t":15,"k":1,"h":"贾家荣国府","g":"女","al":"小红","f":"","ch":13,"img":"img/HLM-P055.jpg"},{"id":"HLM-P056","n":"柳五儿","r":"仆役","c":0,"d":2,"b":0.0,"t":16,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":14,"img":"img/HLM-P056.jpg"},{"id":"HLM-P057","n":"焦大","r":"仆役","c":2,"d":1,"b":0.0,"t":4,"k":1,"h":"贾家宁国府","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P057.jpg"},{"id":"HLM-P058","n":"芳官","r":"仆役","c":0,"d":3,"b":0.0139,"t":25,"k":2,"h":"贾家荣国府","g":"女","al":"花芳官","f":"","ch":12,"img":"img/HLM-P058.jpg"},{"id":"HLM-P059","n":"蒋玉菡","r":"外人","c":0,"d":2,"b":0.0,"t":9,"k":2,"h":"其他","g":"男","al":"琪官","f":"娶袭人","ch":7,"img":"img/HLM-P059.jpg"},{"id":"HLM-P060","n":"藕官","r":"仆役","c":1,"d":2,"b":0.0068,"t":15,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":5,"img":"img/HLM-P060.jpg"},{"id":"HLM-P061","n":"袭人","r":"仆役","c":0,"d":2,"b":0.0,"t":69,"k":2,"h":"贾家荣国府","g":"女","al":"花袭人","f":"嫁蒋玉菡","ch":87,"img":"img/HLM-P061.jpg"},{"id":"HLM-P062","n":"贾兰","r":"主子","c":0,"d":2,"b":0.0,"t":29,"k":2,"h":"贾家荣国府","g":"男","al":"兰哥儿","f":"中举","ch":28,"img":"img/HLM-P062.jpg"},{"id":"HLM-P063","n":"贾蔷","r":"主子","c":2,"d":2,"b":0.0014,"t":25,"k":2,"h":"贾家宁国府","g":"男","al":"蔷哥儿","f":"不知所终","ch":12,"img":"img/HLM-P063.jpg"},{"id":"HLM-P064","n":"赖嬷嬷","r":"仆役","c":6,"d":2,"b":0.0068,"t":6,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P064.jpg"},{"id":"HLM-P065","n":"金文翔","r":"仆役","c":1,"d":2,"b":0.0,"t":1,"k":2,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P065.jpg"},{"id":"HLM-P066","n":"佩凤","r":"妾室","c":2,"d":1,"b":0.0,"t":5,"k":1,"h":"贾家宁国府","g":"女","al":"","f":"","ch":6,"img":"img/HLM-P066.jpg"},{"id":"HLM-P067","n":"偕鸾","r":"妾室","c":2,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家宁国府","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P067.jpg"},{"id":"HLM-P068","n":"傻大姐","r":"仆役","c":1,"d":1,"b":0.0,"t":2,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":4,"img":"img/HLM-P068.jpg"},{"id":"HLM-P069","n":"入画","r":"仆役","c":2,"d":1,"b":0.0,"t":14,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":8,"img":"img/HLM-P069.jpg"},{"id":"HLM-P070","n":"吴贵","r":"仆役","c":0,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":""},{"id":"HLM-P071","n":"四儿","r":"仆役","c":0,"d":1,"b":0.0,"t":7,"k":1,"h":"贾家荣国府","g":"女","al":"四儿（蕙香）|蕙香","f":"","ch":6,"img":"img/HLM-P071.jpg"},{"id":"HLM-P072","n":"坠儿","r":"仆役","c":0,"d":1,"b":0.0,"t":7,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":8,"img":"img/HLM-P072.jpg"},{"id":"HLM-P073","n":"娇杏","r":"妾室","c":5,"d":1,"b":0.0,"t":0,"k":1,"h":"其他","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P073.jpg"},{"id":"HLM-P074","n":"孙绍祖","r":"外人","c":1,"d":1,"b":0.0,"t":4,"k":1,"h":"其他","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P074.jpg"},{"id":"HLM-P075","n":"宝珠","r":"仆役","c":7,"d":1,"b":0.0,"t":2,"k":1,"h":"贾家宁国府","g":"女","al":"","f":"","ch":4,"img":"img/HLM-P075.jpg"},{"id":"HLM-P076","n":"宝蟾","r":"仆役","c":3,"d":1,"b":0.0,"t":8,"k":1,"h":"其他","g":"女","al":"","f":"","ch":6,"img":"img/HLM-P076.jpg"},{"id":"HLM-P077","n":"封肃","r":"外人","c":3,"d":1,"b":0.0,"t":1,"k":1,"h":"其他","g":"男","al":"","f":"","ch":2,"img":"img/HLM-P077.jpg"},{"id":"HLM-P078","n":"彩云","r":"仆役","c":5,"d":1,"b":0.0,"t":14,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":12,"img":"img/HLM-P078.jpg"},{"id":"HLM-P079","n":"彩霞","r":"仆役","c":5,"d":1,"b":0.0,"t":4,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":5,"img":"img/HLM-P079.jpg"},{"id":"HLM-P080","n":"智能儿","r":"客卿","c":7,"d":1,"b":0.0,"t":7,"k":1,"h":"其他","g":"女","al":"智能","f":"","ch":3,"img":"img/HLM-P080.jpg"},{"id":"HLM-P081","n":"李贵","r":"仆役","c":0,"d":2,"b":0.0,"t":16,"k":2,"h":"贾家荣国府","g":"男","al":"","f":"","ch":14,"img":"img/HLM-P081.jpg"},{"id":"HLM-P082","n":"林之孝","r":"仆役","c":-1,"d":1,"b":0.0,"t":27,"k":1,"h":"贾家荣国府","g":"男","al":"","f":"","ch":16,"img":"img/HLM-P082.jpg"},{"id":"HLM-P083","n":"林之孝家的","r":"仆役","c":-1,"d":1,"b":0.0,"t":24,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":15,"img":"img/HLM-P083.jpg"},{"id":"HLM-P084","n":"柳湘莲","r":"外人","c":3,"d":1,"b":0.0,"t":9,"k":1,"h":"其他","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P084.jpg"},{"id":"HLM-P085","n":"王善保家的","r":"仆役","c":8,"d":1,"b":0.0,"t":13,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":3,"img":"img/HLM-P085.jpg"},{"id":"HLM-P086","n":"王子腾","r":"外人","c":4,"d":1,"b":0.0,"t":20,"k":1,"h":"其他","g":"男","al":"","f":"","ch":16,"img":"img/HLM-P086.jpg"},{"id":"HLM-P087","n":"王狗儿","r":"外人","c":4,"d":1,"b":0.0,"t":5,"k":1,"h":"其他","g":"男","al":"","f":"","ch":7,"img":""},{"id":"HLM-P088","n":"瑞珠","r":"仆役","c":7,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家宁国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P088.jpg"},{"id":"HLM-P089","n":"甄宝玉","r":"主子","c":-1,"d":1,"b":0.0,"t":6,"k":1,"h":"其他","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P089.jpg"},{"id":"HLM-P090","n":"甄应嘉","r":"外人","c":-1,"d":1,"b":0.0,"t":1,"k":1,"h":"其他","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P090.jpg"},{"id":"HLM-P091","n":"秋桐","r":"仆役","c":1,"d":1,"b":0.0,"t":8,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":7,"img":"img/HLM-P091.jpg"},{"id":"HLM-P092","n":"秋纹","r":"仆役","c":0,"d":1,"b":0.0,"t":15,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":23,"img":"img/HLM-P092.jpg"},{"id":"HLM-P093","n":"紫鹃","r":"仆役","c":1,"d":2,"b":0.0,"t":36,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"随惜春出家","ch":45,"img":"img/HLM-P093.jpg"},{"id":"HLM-P094","n":"茗烟","r":"仆役","c":0,"d":1,"b":0.0,"t":28,"k":1,"h":"贾家荣国府","g":"男","al":"焙茗","f":"","ch":31,"img":"img/HLM-P094.jpg"},{"id":"HLM-P095","n":"药官","r":"仆役","c":1,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家荣国府","g":"女","al":"菂官","f":"","ch":0,"img":""},{"id":"HLM-P096","n":"莺儿","r":"仆役","c":3,"d":1,"b":0.0,"t":35,"k":1,"h":"薛家","g":"女","al":"黄金莺","f":"","ch":26,"img":"img/HLM-P096.jpg"},{"id":"HLM-P097","n":"赖大","r":"仆役","c":6,"d":2,"b":0.0135,"t":25,"k":1,"h":"贾家荣国府","g":"男","al":"","f":"","ch":23,"img":"img/HLM-P097.jpg"},{"id":"HLM-P098","n":"赖尚荣","r":"外人","c":6,"d":1,"b":0.0,"t":2,"k":1,"h":"其他","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P098.jpg"},{"id":"HLM-P099","n":"邢忠","r":"外人","c":8,"d":1,"b":0.0,"t":0,"k":1,"h":"其他","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P100","n":"金文翔家的","r":"仆役","c":1,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家荣国府","g":"女","al":"金文翔媳妇","f":"","ch":0,"img":""},{"id":"HLM-P101","n":"雪雁","r":"仆役","c":1,"d":1,"b":0.0,"t":18,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":20,"img":"img/HLM-P101.jpg"},{"id":"HLM-P102","n":"马道婆","r":"外人","c":0,"d":1,"b":0.0,"t":3,"k":1,"h":"其他","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P102.jpg"},{"id":"HLM-P103","n":"麝月","r":"仆役","c":0,"d":1,"b":0.0,"t":32,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":46,"img":"img/HLM-P103.jpg"},{"id":"HLM-P104","n":"龄官","r":"仆役","c":2,"d":2,"b":0.0026,"t":2,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P104.jpg"},{"id":"HLM-P105","n":"东平王","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P105.jpg"},{"id":"HLM-P106","n":"丰儿","r":"仆役","c":4,"d":1,"b":0.0,"t":19,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":20,"img":"img/HLM-P106.jpg"},{"id":"HLM-P107","n":"乌进孝","r":"外人","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P107.jpg"},{"id":"HLM-P108","n":"伴鹤","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":""},{"id":"HLM-P109","n":"住儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":5,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P109.jpg"},{"id":"HLM-P110","n":"余信","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P111","n":"侍画","r":"仆役","c":6,"d":1,"b":0.0,"t":19,"k":1,"h":"贾家荣国府","g":"女","al":"待书|侍书","f":"","ch":14,"img":"img/HLM-P111.jpg"},{"id":"HLM-P112","n":"兴儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":10,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":5,"img":""},{"id":"HLM-P113","n":"冯渊","r":"外人","c":-1,"d":0,"b":0.0,"t":3,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P113.jpg"},{"id":"HLM-P114","n":"净虚","r":"客卿","c":-1,"d":0,"b":0.0,"t":3,"k":0,"h":"其他","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P114.jpg"},{"id":"HLM-P115","n":"包勇","r":"仆役","c":-1,"d":0,"b":0.0,"t":10,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":7,"img":"img/HLM-P115.jpg"},{"id":"HLM-P116","n":"单聘仁","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P116.jpg"},{"id":"HLM-P117","n":"司棋","r":"仆役","c":1,"d":1,"b":0.0,"t":21,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"撞墙自尽","ch":13,"img":"img/HLM-P117.jpg"},{"id":"HLM-P118","n":"吴新登","r":"仆役","c":-1,"d":0,"b":0.0,"t":3,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":5,"img":"img/HLM-P118.jpg"},{"id":"HLM-P119","n":"周太监","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P120","n":"周瑞","r":"仆役","c":5,"d":1,"b":0.0,"t":17,"k":1,"h":"贾家荣国府","g":"男","al":"","f":"","ch":15,"img":"img/HLM-P120.jpg"},{"id":"HLM-P121","n":"喜儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":3,"img":"img/HLM-P121.jpg"},{"id":"HLM-P122","n":"圆信","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"女","al":"圆心","f":"","ch":1,"img":"img/HLM-P122.jpg"},{"id":"HLM-P123","n":"夏秉忠","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"夏守忠","f":"","ch":2,"img":""},{"id":"HLM-P124","n":"大色空","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"色空","f":"","ch":1,"img":""},{"id":"HLM-P125","n":"宋嬷嬷","r":"仆役","c":-1,"d":0,"b":0.0,"t":4,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":3,"img":"img/HLM-P125.jpg"},{"id":"HLM-P126","n":"宝官","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P126.jpg"},{"id":"HLM-P127","n":"寿儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P128","n":"小舍儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":""},{"id":"HLM-P129","n":"小蝉","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":""},{"id":"HLM-P130","n":"小鹊","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P130.jpg"},{"id":"HLM-P132","n":"山子野","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P133","n":"平儿","r":"妾室","c":4,"d":2,"b":0.0,"t":64,"k":2,"h":"贾家荣国府","g":"女","al":"平姑娘","f":"扶正","ch":69,"img":"img/HLM-P133.jpg"},{"id":"HLM-P134","n":"庆儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":"img/HLM-P134.jpg"},{"id":"HLM-P135","n":"张华","r":"外人","c":-1,"d":0,"b":0.0,"t":7,"k":0,"h":"其他","g":"男","al":"","f":"","ch":5,"img":"img/HLM-P135.jpg"},{"id":"HLM-P136","n":"张妈妈","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":0,"img":""},{"id":"HLM-P137","n":"张金哥","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"女","al":"金哥","f":"","ch":2,"img":""},{"id":"HLM-P138","n":"彩儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P138.jpg"},{"id":"HLM-P139","n":"彩凤","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P139.jpg"},{"id":"HLM-P140","n":"彩屏","r":"仆役","c":-1,"d":0,"b":0.0,"t":9,"k":0,"h":"贾家荣国府","g":"女","al":"彩屏","f":"","ch":8,"img":""},{"id":"HLM-P141","n":"彩明","r":"仆役","c":4,"d":1,"b":0.0,"t":3,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":7,"img":"img/HLM-P141.jpg"},{"id":"HLM-P142","n":"彩鸾","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P142.jpg"},{"id":"HLM-P143","n":"扫红","r":"仆役","c":-1,"d":0,"b":0.0,"t":3,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":3,"img":""},{"id":"HLM-P144","n":"抱琴","r":"仆役","c":5,"d":1,"b":0.0,"t":0,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P144.jpg"},{"id":"HLM-P145","n":"方椿","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P146","n":"昭儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P146.jpg"},{"id":"HLM-P147","n":"智善","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P147.jpg"},{"id":"HLM-P148","n":"智通","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"女","al":"","f":"","ch":2,"img":""},{"id":"HLM-P149","n":"李十儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":""},{"id":"HLM-P150","n":"玉官","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":""},{"id":"HLM-P151","n":"玉柱儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":0,"img":""},{"id":"HLM-P152","n":"王仁","r":"外人","c":-1,"d":0,"b":0.0,"t":14,"k":0,"h":"其他","g":"男","al":"","f":"","ch":9,"img":"img/HLM-P152.jpg"},{"id":"HLM-P153","n":"王作梅","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P154","n":"王善保","r":"仆役","c":8,"d":1,"b":0.0,"t":2,"k":1,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":""},{"id":"HLM-P155","n":"王柱儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":0,"img":""},{"id":"HLM-P156","n":"玻璃","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":4,"img":"img/HLM-P156.jpg"},{"id":"HLM-P157","n":"珍珠","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":5,"img":""},{"id":"HLM-P158","n":"琥珀","r":"仆役","c":-1,"d":0,"b":0.0,"t":19,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":16,"img":"img/HLM-P158.jpg"},{"id":"HLM-P160","n":"石呆子","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":2,"img":"img/HLM-P160.jpg"},{"id":"HLM-P161","n":"碧痕","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":3,"img":"img/HLM-P161.jpg"},{"id":"HLM-P162","n":"程日兴","r":"客卿","c":-1,"d":0,"b":0.0,"t":1,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P162.jpg"},{"id":"HLM-P163","n":"翡翠","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":0,"img":"img/HLM-P163.jpg"},{"id":"HLM-P164","n":"艾官","r":"仆役","c":-1,"d":0,"b":0.0,"t":1,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P164.jpg"},{"id":"HLM-P165","n":"茄官","r":"仆役","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":1,"img":"img/HLM-P165.jpg"},{"id":"HLM-P166","n":"葵官","r":"仆役","c":-1,"d":0,"b":0.0,"t":9,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":3,"img":"img/HLM-P166.jpg"},{"id":"HLM-P167","n":"蕊官","r":"仆役","c":-1,"d":0,"b":0.0,"t":13,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":5,"img":"img/HLM-P167.jpg"},{"id":"HLM-P168","n":"裘世安","r":"外人","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"其他","g":"男","al":"","f":"","ch":1,"img":""},{"id":"HLM-P169","n":"詹光","r":"客卿","c":-1,"d":0,"b":0.0,"t":5,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":4,"img":"img/HLM-P169.jpg"},{"id":"HLM-P170","n":"豆官","r":"仆役","c":-1,"d":0,"b":0.0,"t":4,"k":0,"h":"贾家荣国府","g":"女","al":"","f":"","ch":2,"img":"img/HLM-P170.jpg"},{"id":"HLM-P171","n":"贾代修","r":"宗族","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"贾家宁国府","g":"男","al":"","f":"","ch":1,"img":"img/HLM-P171.jpg"},{"id":"HLM-P172","n":"贾代儒","r":"宗族","c":-1,"d":0,"b":0.0,"t":9,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":11,"img":"img/HLM-P172.jpg"},{"id":"HLM-P173","n":"贾瑞","r":"宗族","c":-1,"d":0,"b":0.0,"t":12,"k":0,"h":"贾家荣国府","g":"男","al":"贾天祥","f":"病亡","ch":4,"img":"img/HLM-P173.jpg"},{"id":"HLM-P174","n":"贾芸","r":"宗族","c":-1,"d":0,"b":0.0,"t":31,"k":0,"h":"贾家荣国府","g":"男","al":"芸哥儿","f":"存续","ch":16,"img":"img/HLM-P174.jpg"},{"id":"HLM-P175","n":"贾芹","r":"宗族","c":-1,"d":0,"b":0.0,"t":14,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":7,"img":"img/HLM-P175.jpg"},{"id":"HLM-P176","n":"载权","r":"客卿","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"戴权","f":"","ch":1,"img":"img/HLM-P176.jpg"},{"id":"HLM-P177","n":"邓好时","r":"外人","c":-1,"d":0,"b":0.0,"t":0,"k":0,"h":"其他","g":"男","al":"","f":"","ch":0,"img":"img/HLM-P177.jpg"},{"id":"HLM-P178","n":"锄药","r":"仆役","c":-1,"d":0,"b":0.0,"t":3,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":6,"img":""},{"id":"HLM-P179","n":"隆儿","r":"仆役","c":-1,"d":0,"b":0.0,"t":2,"k":0,"h":"贾家荣国府","g":"男","al":"","f":"","ch":2,"img":"img/HLM-P179.jpg"},{"id":"HLM-P180","n":"周姨娘","r":"妾室","c":6,"d":1,"b":0.0,"t":12,"k":1,"h":"贾家荣国府","g":"女","al":"","f":"","ch":7,"img":""},{"id":"HLM-P181","n":"文官","r":"仆役","c":2,"d":2,"b":0.0079,"t":13,"k":2,"h":"贾家荣国府","g":"女","al":"","f":"","ch":8,"img":""}],"links":[{"s":20,"t":27,"l":"亲属关系","p":"父亲"},{"s":27,"t":20,"l":"亲属关系","p":"儿子"},{"s":29,"t":27,"l":"亲属关系","p":"儿子"},{"s":27,"t":29,"l":"亲属关系","p":"父亲"},{"s":56,"t":20,"l":"主仆关系","p":"老仆"},{"s":20,"t":56,"l":"主仆关系","p":"主人"},{"s":6,"t":29,"l":"亲属关系","p":"儿子"},{"s":29,"t":6,"l":"亲属关系","p":"父亲"},{"s":23,"t":6,"l":"亲属关系","p":"妻"},{"s":6,"t":23,"l":"亲属关系","p":"丈夫"},{"s":65,"t":6,"l":"亲属关系","p":"妾"},{"s":66,"t":6,"l":"亲属关系","p":"妾"},{"s":31,"t":6,"l":"亲属关系","p":"儿子"},{"s":6,"t":31,"l":"亲属关系","p":"父亲"},{"s":15,"t":31,"l":"亲属关系","p":"妻"},{"s":31,"t":15,"l":"亲属关系","p":"丈夫"},{"s":87,"t":15,"l":"主仆关系","p":"丫鬟"},{"s":74,"t":15,"l":"主仆关系","p":"丫鬟"},{"s":68,"t":19,"l":"主仆关系","p":"丫鬟"},{"s":29,"t":19,"l":"亲属关系","p":"父亲"},{"s":19,"t":29,"l":"亲属关系","p":"女儿"},{"s":23,"t":19,"l":"亲属关系","p":"嫂子"},{"s":19,"t":23,"l":"亲属关系","p":"小姑子"},{"s":38,"t":7,"l":"亲属关系","p":"父亲"},{"s":20,"t":38,"l":"亲属关系","p":"兄弟"},{"s":7,"t":38,"l":"亲属关系","p":"儿子"},{"s":3,"t":7,"l":"亲属关系","p":"妻"},{"s":7,"t":3,"l":"亲属关系","p":"丈夫"},{"s":7,"t":1,"l":"亲属关系","p":"父亲"},{"s":1,"t":7,"l":"亲属关系","p":"儿子"},{"s":7,"t":4,"l":"亲属关系","p":"父亲"},{"s":4,"t":7,"l":"亲属关系","p":"儿子"},{"s":4,"t":3,"l":"亲属关系","p":"儿子"},{"s":3,"t":4,"l":"亲属关系","p":"母亲"},{"s":11,"t":4,"l":"亲属关系","p":"妻"},{"s":4,"t":11,"l":"亲属关系","p":"丈夫"},{"s":11,"t":3,"l":"亲属关系","p":"儿媳"},{"s":3,"t":11,"l":"亲属关系","p":"婆婆"},{"s":1,"t":3,"l":"亲属关系","p":"儿子"},{"s":2,"t":3,"l":"亲属关系","p":"儿媳"},{"s":44,"t":3,"l":"主仆关系","p":"丫鬟"},{"s":25,"t":13,"l":"亲属关系","p":"丈夫"},{"s":13,"t":25,"l":"亲属关系","p":"妻"},{"s":25,"t":5,"l":"亲属关系","p":"父亲"},{"s":5,"t":25,"l":"亲属关系","p":"女儿"},{"s":13,"t":5,"l":"亲属关系","p":"母亲"},{"s":3,"t":5,"l":"亲属关系","p":"外祖母"},{"s":5,"t":3,"l":"亲属关系","p":"外孙女"},{"s":92,"t":3,"l":"主仆关系","p":"丫鬟"},{"s":100,"t":5,"l":"主仆关系","p":"丫鬟"},{"s":9,"t":11,"l":"亲属关系","p":"儿媳"},{"s":11,"t":9,"l":"亲属关系","p":"婆婆"},{"s":90,"t":4,"l":"主仆关系","p":"丫鬟"},{"s":90,"t":4,"l":"亲属关系","p":"妾"},{"s":12,"t":4,"l":"亲属关系","p":"儿子"},{"s":4,"t":12,"l":"亲属关系","p":"父亲"},{"s":9,"t":12,"l":"亲属关系","p":"妻"},{"s":12,"t":9,"l":"亲属关系","p":"丈夫"},{"s":39,"t":4,"l":"亲属关系","p":"女儿"},{"s":4,"t":39,"l":"亲属关系","p":"父亲"},{"s":39,"t":73,"l":"亲属关系","p":"丈夫"},{"s":14,"t":9,"l":"亲属关系","p":"女儿"},{"s":14,"t":12,"l":"亲属关系","p":"女儿"},{"s":14,"t":46,"l":"亲属关系","p":"被抚养"},{"s":12,"t":14,"l":"亲属关系","p":"父亲"},{"s":9,"t":14,"l":"亲属关系","p":"母亲"},{"s":9,"t":2,"l":"亲属关系","p":"侄女"},{"s":32,"t":51,"l":"亲属关系","p":"女儿"},{"s":32,"t":12,"l":"亲属关系","p":"妾"},{"s":2,"t":1,"l":"亲属关系","p":"妻"},{"s":1,"t":2,"l":"亲属关系","p":"丈夫"},{"s":21,"t":1,"l":"亲属关系","p":"妾"},{"s":2,"t":10,"l":"亲属关系","p":"姐妹"},{"s":10,"t":2,"l":"亲属关系","p":"姐妹"},{"s":42,"t":2,"l":"主仆关系","p":"丫鬟"},{"s":77,"t":2,"l":"主仆关系","p":"丫鬟"},{"s":78,"t":2,"l":"主仆关系","p":"丫鬟"},{"s":33,"t":42,"l":"亲属关系","p":"妹妹"},{"s":42,"t":33,"l":"亲属关系","p":"姐姐"},{"s":33,"t":2,"l":"主仆关系","p":"丫鬟"},{"s":8,"t":2,"l":"亲属关系","p":"儿子"},{"s":8,"t":1,"l":"亲属关系","p":"儿子"},{"s":2,"t":8,"l":"亲属关系","p":"母亲"},{"s":1,"t":8,"l":"亲属关系","p":"父亲"},{"s":8,"t":24,"l":"亲属关系","p":"丈夫"},{"s":24,"t":8,"l":"亲属关系","p":"妻"},{"s":61,"t":8,"l":"亲属关系","p":"儿子"},{"s":61,"t":24,"l":"亲属关系","p":"儿子"},{"s":18,"t":1,"l":"亲属关系","p":"女儿"},{"s":1,"t":18,"l":"亲属关系","p":"父亲"},{"s":18,"t":2,"l":"亲属关系","p":"女儿"},{"s":2,"t":18,"l":"亲属关系","p":"母亲"},{"s":0,"t":1,"l":"亲属关系","p":"儿子"},{"s":1,"t":0,"l":"亲属关系","p":"父亲"},{"s":18,"t":0,"l":"亲属关系","p":"姐姐"},{"s":0,"t":2,"l":"亲属关系","p":"儿子"},{"s":2,"t":0,"l":"亲属关系","p":"母亲"},{"s":0,"t":16,"l":"亲属关系","p":"丈夫"},{"s":16,"t":0,"l":"亲属关系","p":"妻"},{"s":16,"t":10,"l":"亲属关系","p":"女儿"},{"s":60,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":102,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":91,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":52,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":71,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":70,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":55,"t":57,"l":"社会关系","p":"朋友"},{"s":55,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":93,"t":0,"l":"主仆关系","p":"小厮"},{"s":30,"t":1,"l":"亲属关系","p":"儿子"},{"s":1,"t":30,"l":"亲属关系","p":"父亲"},{"s":30,"t":21,"l":"亲属关系","p":"儿子"},{"s":21,"t":30,"l":"亲属关系","p":"母亲"},{"s":28,"t":1,"l":"亲属关系","p":"女儿"},{"s":1,"t":28,"l":"亲属关系","p":"父亲"},{"s":28,"t":21,"l":"亲属关系","p":"女儿"},{"s":21,"t":28,"l":"亲属关系","p":"母亲"},{"s":62,"t":6,"l":"亲属关系","p":"养子"},{"s":64,"t":44,"l":"亲属关系","p":"哥哥"},{"s":64,"t":3,"l":"主仆关系","p":"买办"},{"s":99,"t":44,"l":"亲属关系","p":"嫂子"},{"s":47,"t":2,"l":"主仆关系","p":"陪房"},{"s":84,"t":11,"l":"主仆关系","p":"陪房"},{"s":81,"t":54,"l":"亲属关系","p":"父亲"},{"s":82,"t":54,"l":"亲属关系","p":"母亲"},{"s":53,"t":0,"l":"主仆关系","p":"乳母"},{"s":53,"t":80,"l":"亲属关系","p":"母亲"},{"s":67,"t":3,"l":"主仆关系","p":"丫鬟"},{"s":57,"t":0,"l":"主仆关系","p":"丫鬟"},{"s":103,"t":62,"l":"社会关系","p":"私情"},{"s":59,"t":94,"l":"社会关系","p":"私情"},{"s":59,"t":5,"l":"主仆关系","p":"丫鬟"},{"s":63,"t":96,"l":"亲属关系","p":"母亲"},{"s":97,"t":63,"l":"亲属关系","p":"孙子"},{"s":69,"t":52,"l":"亲属关系","p":"表兄"},{"s":17,"t":10,"l":"亲属关系","p":"儿子"},{"s":10,"t":17,"l":"亲属关系","p":"母亲"},{"s":37,"t":10,"l":"亲属关系","p":"侄儿"},{"s":41,"t":37,"l":"亲属关系","p":"丈夫"},{"s":36,"t":10,"l":"亲属关系","p":"侄女"},{"s":10,"t":36,"l":"亲属关系","p":"姑母"},{"s":36,"t":37,"l":"亲属关系","p":"妹妹"},{"s":48,"t":17,"l":"亲属关系","p":"妻"},{"s":43,"t":17,"l":"亲属关系","p":"妾"},{"s":43,"t":34,"l":"亲属关系","p":"女儿"},{"s":34,"t":43,"l":"亲属关系","p":"父亲"},{"s":75,"t":48,"l":"主仆关系","p":"丫鬟"},{"s":41,"t":98,"l":"亲属关系","p":"女儿"},{"s":41,"t":11,"l":"亲属关系","p":"侄女"},{"s":95,"t":16,"l":"主仆关系","p":"丫鬟"},{"s":46,"t":86,"l":"亲属关系","p":"岳母"},{"s":40,"t":5,"l":"社会关系","p":"师生"},{"s":72,"t":40,"l":"亲属关系","p":"妾"},{"s":76,"t":34,"l":"亲属关系","p":"岳父"},{"s":88,"t":89,"l":"亲属关系","p":"儿子"},{"s":49,"t":5,"l":"社会关系","p":"朋友"},{"s":49,"t":0,"l":"社会关系","p":"朋友"},{"s":83,"t":17,"l":"社会关系","p":"朋友"},{"s":58,"t":0,"l":"社会关系","p":"朋友"},{"s":58,"t":60,"l":"亲属关系","p":"配偶"},{"s":45,"t":47,"l":"亲属关系","p":"女婿"},{"s":45,"t":40,"l":"社会关系","p":"朋友"},{"s":101,"t":0,"l":"亲属关系","p":"义母"},{"s":79,"t":26,"l":"社会关系","p":"私情"},{"s":50,"t":51,"l":"亲属关系","p":"女儿"},{"s":50,"t":32,"l":"亲属关系","p":"妹妹"},{"s":26,"t":35,"l":"亲属关系","p":"儿子"},{"s":35,"t":26,"l":"亲属关系","p":"父亲"},{"s":35,"t":15,"l":"亲属关系","p":"养父"},{"s":22,"t":0,"l":"社会关系","p":"朋友"},{"s":22,"t":5,"l":"社会关系","p":"朋友"},{"s":22,"t":16,"l":"社会关系","p":"朋友"},{"s":22,"t":3,"l":"亲属关系","p":"侄孙女"},{"s":85,"t":9,"l":"亲属关系","p":"伯父"},{"s":0,"t":5,"l":"亲属关系","p":"表兄妹"},{"s":5,"t":0,"l":"亲属关系","p":"表兄妹"},{"s":24,"t":0,"l":"亲属关系","p":"嫂子"},{"s":8,"t":0,"l":"亲属关系","p":"哥哥"},{"s":13,"t":3,"l":"亲属关系","p":"女儿"},{"s":13,"t":1,"l":"亲属关系","p":"兄妹"},{"s":13,"t":4,"l":"亲属关系","p":"兄妹"},{"s":1,"t":4,"l":"亲属关系","p":"兄弟"},{"s":0,"t":8,"l":"亲属关系","p":"弟弟"},{"s":7,"t":0,"l":"亲属关系","p":"祖父"},{"s":0,"t":7,"l":"亲属关系","p":"孙子"},{"s":3,"t":0,"l":"亲属关系","p":"祖母"},{"s":26,"t":0,"l":"社会关系","p":"朋友"},{"s":131,"t":9,"l":"主仆关系","p":"丫鬟"},{"s":131,"t":12,"l":"亲属关系","p":"妾"},{"s":92,"t":5,"l":"主仆关系","p":"丫鬟"},{"s":116,"t":39,"l":"主仆关系","p":"丫鬟"},{"s":110,"t":28,"l":"主仆关系","p":"丫鬟"},{"s":142,"t":18,"l":"主仆关系","p":"丫鬟"},{"s":105,"t":9,"l":"主仆关系","p":"丫鬟"},{"s":139,"t":9,"l":"主仆关系","p":"丫鬟"},{"s":80,"t":0,"l":"主仆关系","p":"小厮"},{"s":119,"t":2,"l":"主仆关系","p":"陪房"},{"s":152,"t":11,"l":"主仆关系","p":"陪房"},{"s":96,"t":1,"l":"主仆关系","p":"管家"},{"s":0,"t":28,"l":"亲属关系","p":"哥哥"},{"s":0,"t":19,"l":"亲属关系","p":"哥哥"},{"s":39,"t":0,"l":"亲属关系","p":"姐姐"},{"s":28,"t":30,"l":"亲属关系","p":"姐姐"},{"s":12,"t":39,"l":"亲属关系","p":"哥哥"},{"s":17,"t":16,"l":"亲属关系","p":"哥哥"},{"s":3,"t":39,"l":"亲属关系","p":"祖母"},{"s":3,"t":28,"l":"亲属关系","p":"祖母"},{"s":177,"t":1,"l":"亲属关系","p":"妾"},{"s":178,"t":57,"l":"社会关系","p":"朋友"},{"s":178,"t":103,"l":"社会关系","p":"朋友"},{"s":56,"t":20,"l":"主仆关系","p":"仆役"},{"s":6,"t":65,"l":"亲属关系","p":"纳妾"},{"s":6,"t":66,"l":"亲属关系","p":"纳妾"},{"s":15,"t":87,"l":"主仆关系","p":"主人"},{"s":15,"t":74,"l":"主仆关系","p":"主人"},{"s":19,"t":68,"l":"主仆关系","p":"主人"},{"s":19,"t":29,"l":"亲属关系","p":"儿子"},{"s":29,"t":19,"l":"亲属关系","p":"母亲"},{"s":38,"t":20,"l":"亲属关系","p":"兄弟"},{"s":3,"t":4,"l":"亲属关系","p":"父亲"},{"s":4,"t":3,"l":"亲属关系","p":"女儿"},{"s":3,"t":1,"l":"亲属关系","p":"父亲"},{"s":3,"t":2,"l":"亲属关系","p":"婆婆"},{"s":3,"t":44,"l":"主仆关系","p":"主人"},{"s":5,"t":25,"l":"亲属关系","p":"儿子"},{"s":25,"t":5,"l":"亲属关系","p":"母亲"},{"s":5,"t":13,"l":"亲属关系","p":"女儿"},{"s":3,"t":92,"l":"主仆关系","p":"主人"},{"s":5,"t":100,"l":"主仆关系","p":"主人"},{"s":4,"t":90,"l":"主仆关系","p":"主人"},{"s":4,"t":90,"l":"亲属关系","p":"纳妾"},{"s":4,"t":39,"l":"亲属关系","p":"母亲"},{"s":39,"t":4,"l":"亲属关系","p":"儿子"},{"s":73,"t":39,"l":"亲属关系","p":"妻"},{"s":12,"t":14,"l":"亲属关系","p":"母亲"},{"s":14,"t":12,"l":"亲属关系","p":"儿子"},{"s":2,"t":9,"l":"亲属关系","p":"姑母"},{"s":51,"t":32,"l":"亲属关系","p":"母亲"},{"s":12,"t":32,"l":"亲属关系","p":"纳妾"},{"s":1,"t":21,"l":"亲属关系","p":"纳妾"},{"s":2,"t":42,"l":"主仆关系","p":"主人"},{"s":2,"t":77,"l":"主仆关系","p":"主人"},{"s":2,"t":78,"l":"主仆关系","p":"主人"},{"s":2,"t":33,"l":"主仆关系","p":"主人"},{"s":2,"t":8,"l":"亲属关系","p":"父亲"},{"s":8,"t":2,"l":"亲属关系","p":"女儿"},{"s":8,"t":61,"l":"亲属关系","p":"父亲"},{"s":24,"t":61,"l":"亲属关系","p":"父亲"},{"s":1,"t":18,"l":"亲属关系","p":"母亲"},{"s":18,"t":1,"l":"亲属关系","p":"儿子"},{"s":0,"t":18,"l":"亲属关系","p":"弟弟"},{"s":2,"t":0,"l":"亲属关系","p":"父亲"},{"s":0,"t":2,"l":"亲属关系","p":"女儿"},{"s":10,"t":16,"l":"亲属关系","p":"母亲"},{"s":0,"t":60,"l":"主仆关系","p":"主人"},{"s":0,"t":102,"l":"主仆关系","p":"主人"},{"s":0,"t":91,"l":"主仆关系","p":"主人"},{"s":0,"t":52,"l":"主仆关系","p":"主人"},{"s":0,"t":71,"l":"主仆关系","p":"主人"},{"s":0,"t":70,"l":"主仆关系","p":"主人"},{"s":57,"t":55,"l":"社会关系","p":"朋友"},{"s":0,"t":55,"l":"主仆关系","p":"主人"},{"s":0,"t":93,"l":"主仆关系","p":"主人"},{"s":21,"t":30,"l":"亲属关系","p":"父亲"},{"s":30,"t":21,"l":"亲属关系","p":"女儿"},{"s":1,"t":28,"l":"亲属关系","p":"母亲"},{"s":28,"t":1,"l":"亲属关系","p":"儿子"},{"s":6,"t":62,"l":"亲属关系","p":"养父"},{"s":44,"t":64,"l":"亲属关系","p":"妹妹"},{"s":3,"t":64,"l":"主仆关系","p":"主人"},{"s":44,"t":99,"l":"亲属关系","p":"小姑子"},{"s":2,"t":47,"l":"主仆关系","p":"主人"},{"s":11,"t":84,"l":"主仆关系","p":"主人"},{"s":54,"t":81,"l":"亲属关系","p":"儿子"},{"s":54,"t":82,"l":"亲属关系","p":"女儿"},{"s":0,"t":53,"l":"主仆关系","p":"主人"},{"s":80,"t":53,"l":"亲属关系","p":"女儿"},{"s":3,"t":67,"l":"主仆关系","p":"主人"},{"s":0,"t":57,"l":"主仆关系","p":"主人"},{"s":62,"t":103,"l":"社会关系","p":"私情"},{"s":94,"t":59,"l":"社会关系","p":"私情"},{"s":5,"t":59,"l":"主仆关系","p":"主人"},{"s":96,"t":63,"l":"亲属关系","p":"女儿"},{"s":63,"t":97,"l":"亲属关系","p":"祖父"},{"s":10,"t":17,"l":"亲属关系","p":"父亲"},{"s":17,"t":10,"l":"亲属关系","p":"女儿"},{"s":10,"t":37,"l":"亲属关系","p":"伯父"},{"s":37,"t":41,"l":"亲属关系","p":"妻"},{"s":37,"t":36,"l":"亲属关系","p":"哥哥"},{"s":17,"t":48,"l":"亲属关系","p":"丈夫"},{"s":17,"t":43,"l":"亲属关系","p":"纳妾"},{"s":34,"t":43,"l":"亲属关系","p":"母亲"},{"s":43,"t":34,"l":"亲属关系","p":"儿子"},{"s":48,"t":75,"l":"主仆关系","p":"主人"},{"s":98,"t":41,"l":"亲属关系","p":"母亲"},{"s":11,"t":41,"l":"亲属关系","p":"姑母"},{"s":16,"t":95,"l":"主仆关系","p":"主人"},{"s":86,"t":46,"l":"亲属关系","p":"女婿"},{"s":5,"t":40,"l":"社会关系","p":"学生"},{"s":40,"t":72,"l":"亲属关系","p":"纳妾"},{"s":34,"t":76,"l":"亲属关系","p":"女婿"},{"s":89,"t":88,"l":"亲属关系","p":"父亲"},{"s":5,"t":49,"l":"社会关系","p":"朋友"},{"s":0,"t":49,"l":"社会关系","p":"朋友"},{"s":17,"t":83,"l":"社会关系","p":"朋友"},{"s":0,"t":58,"l":"社会关系","p":"朋友"},{"s":60,"t":58,"l":"亲属关系","p":"配偶"},{"s":47,"t":45,"l":"亲属关系","p":"岳父"},{"s":40,"t":45,"l":"社会关系","p":"朋友"},{"s":26,"t":79,"l":"社会关系","p":"私情"},{"s":51,"t":50,"l":"亲属关系","p":"母亲"},{"s":32,"t":50,"l":"亲属关系","p":"姐姐"},{"s":15,"t":35,"l":"亲属关系","p":"养子"},{"s":0,"t":22,"l":"社会关系","p":"朋友"},{"s":5,"t":22,"l":"社会关系","p":"朋友"},{"s":16,"t":22,"l":"社会关系","p":"朋友"},{"s":3,"t":22,"l":"亲属关系","p":"姑母"},{"s":9,"t":85,"l":"亲属关系","p":"侄女"},{"s":0,"t":24,"l":"亲属关系","p":"小叔子"},{"s":3,"t":13,"l":"亲属关系","p":"母亲"},{"s":1,"t":13,"l":"亲属关系","p":"兄妹"},{"s":4,"t":13,"l":"亲属关系","p":"兄妹"},{"s":4,"t":1,"l":"亲属关系","p":"兄弟"},{"s":0,"t":3,"l":"亲属关系","p":"孙子"},{"s":0,"t":26,"l":"社会关系","p":"朋友"},{"s":9,"t":131,"l":"主仆关系","p":"主人"},{"s":12,"t":131,"l":"亲属关系","p":"纳妾"},{"s":5,"t":92,"l":"主仆关系","p":"主人"},{"s":39,"t":116,"l":"主仆关系","p":"主人"},{"s":28,"t":110,"l":"主仆关系","p":"主人"},{"s":18,"t":142,"l":"主仆关系","p":"主人"},{"s":9,"t":105,"l":"主仆关系","p":"主人"},{"s":9,"t":139,"l":"主仆关系","p":"主人"},{"s":0,"t":80,"l":"主仆关系","p":"主人"},{"s":2,"t":119,"l":"主仆关系","p":"主人"},{"s":11,"t":152,"l":"主仆关系","p":"主人"},{"s":1,"t":96,"l":"主仆关系","p":"主人"},{"s":28,"t":0,"l":"亲属关系","p":"妹妹"},{"s":19,"t":0,"l":"亲属关系","p":"妹妹"},{"s":0,"t":39,"l":"亲属关系","p":"弟弟"},{"s":30,"t":28,"l":"亲属关系","p":"弟弟"},{"s":39,"t":12,"l":"亲属关系","p":"妹妹"},{"s":16,"t":17,"l":"亲属关系","p":"妹妹"},{"s":39,"t":3,"l":"亲属关系","p":"孙女"},{"s":28,"t":3,"l":"亲属关系","p":"孙女"},{"s":1,"t":177,"l":"亲属关系","p":"纳妾"},{"s":57,"t":178,"l":"社会关系","p":"朋友"},{"s":103,"t":178,"l":"社会关系","p":"朋友"}],"text":[{"s":0,"t":3,"w":463},{"s":3,"t":9,"w":368},{"s":0,"t":60,"w":367},{"s":0,"t":16,"w":343},{"s":0,"t":5,"w":340},{"s":2,"t":3,"w":319},{"s":0,"t":2,"w":315},{"s":0,"t":9,"w":256},{"s":2,"t":9,"w":243},{"s":5,"t":16,"w":231},{"s":3,"t":16,"w":223},{"s":3,"t":5,"w":213},{"s":0,"t":1,"w":187},{"s":2,"t":16,"w":171},{"s":3,"t":60,"w":171},{"s":9,"t":131,"w":170},{"s":1,"t":3,"w":161},{"s":9,"t":12,"w":146},{"s":0,"t":52,"w":137},{"s":10,"t":16,"w":134},{"s":3,"t":10,"w":134},{"s":9,"t":16,"w":134},{"s":3,"t":44,"w":132},{"s":16,"t":60,"w":130},{"s":3,"t":12,"w":129},{"s":2,"t":60,"w":128},{"s":0,"t":24,"w":124},{"s":0,"t":28,"w":124},{"s":1,"t":2,"w":122},{"s":0,"t":10,"w":117},{"s":2,"t":5,"w":117},{"s":5,"t":9,"w":116},{"s":3,"t":24,"w":114},{"s":0,"t":22,"w":111},{"s":0,"t":102,"w":111},{"s":3,"t":11,"w":109},{"s":2,"t":11,"w":107},{"s":5,"t":92,"w":105},{"s":16,"t":28,"w":104},{"s":16,"t":24,"w":104},{"s":3,"t":131,"w":104},{"s":3,"t":28,"w":103},{"s":2,"t":10,"w":102},{"s":0,"t":92,"w":101},{"s":5,"t":22,"w":101},{"s":9,"t":24,"w":100},{"s":5,"t":60,"w":99},{"s":52,"t":60,"w":98},{"s":5,"t":28,"w":97},{"s":16,"t":22,"w":96},{"s":24,"t":28,"w":95},{"s":9,"t":11,"w":94},{"s":0,"t":12,"w":90},{"s":9,"t":23,"w":90},{"s":9,"t":60,"w":90},{"s":3,"t":22,"w":89},{"s":3,"t":23,"w":88},{"s":60,"t":102,"w":88},{"s":9,"t":44,"w":85},{"s":2,"t":12,"w":85},{"s":2,"t":24,"w":82},{"s":3,"t":6,"w":81},{"s":9,"t":10,"w":80},{"s":1,"t":12,"w":79},{"s":5,"t":24,"w":78},{"s":12,"t":131,"w":74},{"s":0,"t":44,"w":71},{"s":6,"t":31,"w":70},{"s":3,"t":4,"w":70},{"s":6,"t":9,"w":69},{"s":9,"t":28,"w":68},{"s":0,"t":30,"w":68},{"s":1,"t":9,"w":67},{"s":0,"t":131,"w":67},{"s":5,"t":10,"w":67},{"s":0,"t":6,"w":67},{"s":6,"t":12,"w":65},{"s":3,"t":92,"w":64},{"s":2,"t":23,"w":64},{"s":52,"t":102,"w":64},{"s":2,"t":28,"w":64},{"s":1,"t":4,"w":62},{"s":9,"t":31,"w":62},{"s":2,"t":44,"w":61},{"s":60,"t":131,"w":61},{"s":0,"t":11,"w":61},{"s":0,"t":19,"w":59},{"s":0,"t":23,"w":59},{"s":1,"t":6,"w":58},{"s":3,"t":39,"w":58},{"s":1,"t":16,"w":57},{"s":2,"t":131,"w":56},{"s":3,"t":19,"w":56},{"s":0,"t":39,"w":56},{"s":16,"t":36,"w":55},{"s":16,"t":19,"w":55},{"s":0,"t":36,"w":55},{"s":3,"t":31,"w":55},{"s":0,"t":93,"w":54},{"s":6,"t":23,"w":54},{"s":22,"t":24,"w":53},{"s":5,"t":100,"w":52},{"s":0,"t":61,"w":52},{"s":22,"t":28,"w":51},{"s":23,"t":31,"w":50},{"s":16,"t":39,"w":49},{"s":19,"t":28,"w":49},{"s":24,"t":131,"w":48},{"s":3,"t":52,"w":47},{"s":3,"t":46,"w":47},{"s":0,"t":4,"w":46},{"s":22,"t":36,"w":46},{"s":28,"t":60,"w":46},{"s":9,"t":46,"w":46},{"s":2,"t":6,"w":46},{"s":28,"t":39,"w":45},{"s":16,"t":131,"w":45},{"s":28,"t":131,"w":45},{"s":2,"t":30,"w":45},{"s":5,"t":36,"w":45},{"s":4,"t":12,"w":44},{"s":92,"t":100,"w":44},{"s":5,"t":39,"w":43},{"s":19,"t":24,"w":43},{"s":11,"t":23,"w":43},{"s":9,"t":22,"w":42},{"s":3,"t":102,"w":42},{"s":0,"t":57,"w":42},{"s":3,"t":36,"w":42},{"s":10,"t":17,"w":41},{"s":0,"t":17,"w":40},{"s":2,"t":4,"w":40},{"s":22,"t":60,"w":40},{"s":4,"t":6,"w":40},{"s":2,"t":39,"w":40},{"s":60,"t":92,"w":40},{"s":9,"t":19,"w":39},{"s":11,"t":12,"w":39},{"s":1,"t":60,"w":39},{"s":2,"t":22,"w":39},{"s":16,"t":95,"w":39},{"s":10,"t":60,"w":39},{"s":0,"t":31,"w":38},{"s":3,"t":30,"w":38},{"s":5,"t":19,"w":38},{"s":0,"t":95,"w":38},{"s":2,"t":19,"w":38},{"s":1,"t":11,"w":38},{"s":14,"t":131,"w":37},{"s":12,"t":44,"w":37},{"s":44,"t":131,"w":37},{"s":0,"t":100,"w":37},{"s":9,"t":47,"w":37},{"s":19,"t":39,"w":37},{"s":12,"t":31,"w":37},{"s":12,"t":16,"w":37},{"s":16,"t":92,"w":36},{"s":44,"t":60,"w":36},{"s":11,"t":131,"w":36},{"s":2,"t":92,"w":36},{"s":16,"t":44,"w":35},{"s":16,"t":17,"w":35},{"s":4,"t":9,"w":35},{"s":10,"t":22,"w":35},{"s":0,"t":26,"w":35},{"s":24,"t":60,"w":35},{"s":9,"t":39,"w":35},{"s":23,"t":24,"w":35},{"s":2,"t":14,"w":34},{"s":0,"t":41,"w":34},{"s":16,"t":43,"w":34},{"s":0,"t":91,"w":33},{"s":4,"t":11,"w":33},{"s":12,"t":32,"w":33},{"s":57,"t":60,"w":32},{"s":9,"t":14,"w":32},{"s":1,"t":5,"w":32},{"s":11,"t":16,"w":32},{"s":28,"t":36,"w":32},{"s":6,"t":11,"w":31},{"s":0,"t":21,"w":31},{"s":2,"t":52,"w":31},{"s":3,"t":100,"w":31},{"s":9,"t":32,"w":30},{"s":2,"t":61,"w":30},{"s":11,"t":44,"w":30},{"s":2,"t":102,"w":30},{"s":21,"t":30,"w":30},{"s":1,"t":30,"w":30},{"s":1,"t":10,"w":30},{"s":2,"t":31,"w":29},{"s":11,"t":24,"w":29},{"s":2,"t":21,"w":28},{"s":24,"t":39,"w":28},{"s":10,"t":44,"w":28},{"s":30,"t":61,"w":28},{"s":12,"t":23,"w":28},{"s":5,"t":52,"w":27},{"s":19,"t":23,"w":27},{"s":16,"t":23,"w":27},{"s":46,"t":131,"w":27},{"s":28,"t":92,"w":27},{"s":1,"t":44,"w":27},{"s":10,"t":24,"w":27},{"s":9,"t":92,"w":26},{"s":5,"t":44,"w":26},{"s":10,"t":36,"w":26},{"s":2,"t":46,"w":26},{"s":9,"t":105,"w":26},{"s":16,"t":41,"w":26},{"s":24,"t":44,"w":26},{"s":9,"t":21,"w":26},{"s":16,"t":102,"w":25},{"s":0,"t":49,"w":25},{"s":52,"t":57,"w":25},{"s":24,"t":36,"w":25},{"s":3,"t":61,"w":25},{"s":9,"t":52,"w":25},{"s":0,"t":171,"w":25},{"s":11,"t":31,"w":25},{"s":10,"t":28,"w":25},{"s":9,"t":30,"w":24},{"s":22,"t":41,"w":24},{"s":12,"t":96,"w":24},{"s":16,"t":52,"w":24},{"s":0,"t":14,"w":24},{"s":60,"t":91,"w":24},{"s":22,"t":39,"w":23},{"s":3,"t":171,"w":23},{"s":60,"t":95,"w":23},{"s":3,"t":96,"w":23},{"s":10,"t":12,"w":23},{"s":16,"t":30,"w":23},{"s":5,"t":41,"w":22},{"s":4,"t":31,"w":22},{"s":9,"t":36,"w":22},{"s":0,"t":80,"w":22},{"s":10,"t":11,"w":22},{"s":23,"t":28,"w":22},{"s":23,"t":131,"w":22},{"s":12,"t":60,"w":22},{"s":3,"t":18,"w":22},{"s":3,"t":47,"w":22},{"s":9,"t":171,"w":22},{"s":3,"t":32,"w":22},{"s":0,"t":55,"w":22},{"s":5,"t":131,"w":22},{"s":23,"t":44,"w":22},{"s":10,"t":43,"w":21},{"s":1,"t":61,"w":21},{"s":0,"t":46,"w":21},{"s":12,"t":14,"w":21},{"s":10,"t":37,"w":21},{"s":22,"t":44,"w":21},{"s":3,"t":14,"w":21},{"s":30,"t":60,"w":21},{"s":3,"t":91,"w":21},{"s":28,"t":44,"w":21},{"s":5,"t":12,"w":21},{"s":19,"t":22,"w":21},{"s":3,"t":41,"w":20},{"s":21,"t":28,"w":20},{"s":21,"t":60,"w":20},{"s":9,"t":41,"w":20},{"s":36,"t":41,"w":20},{"s":24,"t":41,"w":20},{"s":24,"t":92,"w":20},{"s":3,"t":95,"w":20},{"s":11,"t":39,"w":20},{"s":0,"t":43,"w":20},{"s":3,"t":93,"w":20},{"s":1,"t":28,"w":20},{"s":24,"t":61,"w":20},{"s":55,"t":60,"w":20},{"s":16,"t":61,"w":20},{"s":3,"t":17,"w":20},{"s":5,"t":23,"w":19},{"s":3,"t":82,"w":19},{"s":3,"t":43,"w":19},{"s":9,"t":102,"w":19},{"s":3,"t":156,"w":19},{"s":2,"t":36,"w":19},{"s":3,"t":81,"w":19},{"s":5,"t":43,"w":19},{"s":5,"t":11,"w":19},{"s":19,"t":49,"w":19},{"s":1,"t":31,"w":19},{"s":46,"t":47,"w":19},{"s":43,"t":75,"w":18},{"s":60,"t":61,"w":18},{"s":14,"t":46,"w":18},{"s":6,"t":16,"w":18},{"s":44,"t":46,"w":18},{"s":1,"t":23,"w":18},{"s":10,"t":39,"w":18},{"s":9,"t":81,"w":18},{"s":105,"t":131,"w":18},{"s":22,"t":92,"w":18},{"s":28,"t":41,"w":18},{"s":11,"t":14,"w":18},{"s":28,"t":30,"w":18},{"s":21,"t":24,"w":18},{"s":9,"t":96,"w":18},{"s":2,"t":17,"w":18},{"s":23,"t":60,"w":18},{"s":0,"t":96,"w":17},{"s":1,"t":131,"w":17},{"s":9,"t":26,"w":17},{"s":19,"t":60,"w":17},{"s":3,"t":21,"w":17},{"s":1,"t":24,"w":17},{"s":12,"t":171,"w":17},{"s":1,"t":96,"w":17},{"s":2,"t":171,"w":17},{"s":1,"t":18,"w":17},{"s":60,"t":93,"w":17},{"s":0,"t":18,"w":17},{"s":23,"t":36,"w":17},{"s":1,"t":19,"w":17},{"s":6,"t":10,"w":17},{"s":11,"t":30,"w":17},{"s":22,"t":131,"w":17},{"s":12,"t":81,"w":17},{"s":12,"t":30,"w":17},{"s":6,"t":32,"w":16},{"s":9,"t":54,"w":16},{"s":17,"t":43,"w":16},{"s":44,"t":156,"w":16},{"s":24,"t":30,"w":16},{"s":16,"t":100,"w":16},{"s":34,"t":40,"w":16},{"s":1,"t":39,"w":16},{"s":47,"t":131,"w":16},{"s":2,"t":85,"w":16},{"s":17,"t":83,"w":16},{"s":0,"t":42,"w":16},{"s":2,"t":47,"w":16},{"s":9,"t":119,"w":16},{"s":32,"t":131,"w":15},{"s":3,"t":105,"w":15},{"s":2,"t":18,"w":15},{"s":0,"t":40,"w":15},{"s":16,"t":75,"w":15},{"s":2,"t":95,"w":15},{"s":9,"t":18,"w":15},{"s":10,"t":46,"w":15},{"s":5,"t":95,"w":15},{"s":39,"t":116,"w":15},{"s":0,"t":62,"w":15},{"s":10,"t":131,"w":15},{"s":10,"t":95,"w":15},{"s":0,"t":53,"w":15},{"s":9,"t":85,"w":15},{"s":10,"t":23,"w":15},{"s":91,"t":102,"w":15},{"s":0,"t":70,"w":15},{"s":14,"t":30,"w":15},{"s":16,"t":37,"w":15},{"s":5,"t":49,"w":15},{"s":4,"t":23,"w":15},{"s":14,"t":16,"w":14},{"s":16,"t":49,"w":14},{"s":9,"t":82,"w":14},{"s":12,"t":24,"w":14},{"s":19,"t":131,"w":14},{"s":52,"t":131,"w":14},{"s":28,"t":52,"w":14},{"s":3,"t":85,"w":14},{"s":2,"t":42,"w":14},{"s":2,"t":96,"w":14},{"s":0,"t":58,"w":14},{"s":9,"t":170,"w":14},{"s":1,"t":17,"w":14},{"s":6,"t":131,"w":14},{"s":82,"t":131,"w":14},{"s":0,"t":169,"w":14},{"s":19,"t":92,"w":14},{"s":16,"t":46,"w":14},{"s":28,"t":110,"w":14},{"s":9,"t":90,"w":14},{"s":30,"t":131,"w":14},{"s":0,"t":85,"w":14},{"s":0,"t":33,"w":14},{"s":22,"t":23,"w":14},{"s":5,"t":6,"w":14},{"s":23,"t":32,"w":14},{"s":5,"t":110,"w":13},{"s":0,"t":59,"w":13},{"s":55,"t":57,"w":13},{"s":90,"t":131,"w":13},{"s":12,"t":19,"w":13},{"s":5,"t":102,"w":13},{"s":14,"t":171,"w":13},{"s":21,"t":131,"w":13},{"s":9,"t":84,"w":13},{"s":6,"t":17,"w":13},{"s":17,"t":37,"w":13},{"s":9,"t":100,"w":13},{"s":3,"t":26,"w":13},{"s":10,"t":92,"w":13},{"s":0,"t":82,"w":13},{"s":52,"t":91,"w":13},{"s":10,"t":19,"w":13},{"s":60,"t":100,"w":13},{"s":41,"t":60,"w":13},{"s":4,"t":131,"w":13},{"s":12,"t":17,"w":13},{"s":16,"t":47,"w":12},{"s":28,"t":43,"w":12},{"s":10,"t":75,"w":12},{"s":0,"t":88,"w":12},{"s":6,"t":24,"w":12},{"s":4,"t":30,"w":12},{"s":31,"t":32,"w":12},{"s":3,"t":49,"w":12},{"s":12,"t":50,"w":12},{"s":9,"t":43,"w":12},{"s":5,"t":30,"w":12},{"s":6,"t":26,"w":12},{"s":11,"t":28,"w":12},{"s":39,"t":44,"w":12},{"s":24,"t":82,"w":12},{"s":17,"t":75,"w":12},{"s":31,"t":62,"w":12},{"s":11,"t":19,"w":12},{"s":9,"t":62,"w":12},{"s":28,"t":57,"w":12},{"s":28,"t":82,"w":12},{"s":11,"t":171,"w":12},{"s":12,"t":47,"w":12},{"s":2,"t":100,"w":12},{"s":28,"t":100,"w":12},{"s":19,"t":138,"w":12},{"s":4,"t":5,"w":12},{"s":5,"t":46,"w":12},{"s":0,"t":110,"w":12},{"s":16,"t":21,"w":12},{"s":28,"t":61,"w":12},{"s":36,"t":60,"w":12},{"s":3,"t":37,"w":11},{"s":11,"t":22,"w":11},{"s":12,"t":83,"w":11},{"s":3,"t":80,"w":11},{"s":95,"t":131,"w":11},{"s":52,"t":55,"w":11},{"s":12,"t":150,"w":11},{"s":4,"t":10,"w":11},{"s":0,"t":47,"w":11},{"s":131,"t":171,"w":11},{"s":12,"t":90,"w":11},{"s":5,"t":17,"w":11},{"s":37,"t":75,"w":11},{"s":1,"t":85,"w":11},{"s":19,"t":44,"w":11},{"s":16,"t":93,"w":11},{"s":12,"t":28,"w":11},{"s":2,"t":62,"w":11},{"s":11,"t":60,"w":11},{"s":2,"t":77,"w":11},{"s":16,"t":91,"w":11},{"s":60,"t":70,"w":11},{"s":57,"t":59,"w":11},{"s":1,"t":81,"w":11},{"s":19,"t":114,"w":11},{"s":9,"t":156,"w":11},{"s":6,"t":19,"w":11},{"s":4,"t":61,"w":11},{"s":36,"t":131,"w":11},{"s":12,"t":172,"w":11},{"s":9,"t":95,"w":11},{"s":1,"t":21,"w":11},{"s":10,"t":30,"w":11},{"s":44,"t":92,"w":10},{"s":5,"t":91,"w":10},{"s":14,"t":150,"w":10},{"s":22,"t":30,"w":10},{"s":52,"t":70,"w":10},{"s":0,"t":71,"w":10},{"s":17,"t":60,"w":10},{"s":60,"t":71,"w":10},{"s":36,"t":44,"w":10},{"s":11,"t":41,"w":10},{"s":57,"t":164,"w":10},{"s":9,"t":110,"w":10},{"s":5,"t":21,"w":10},{"s":6,"t":60,"w":10},{"s":3,"t":119,"w":10},{"s":2,"t":37,"w":10},{"s":1,"t":92,"w":10},{"s":102,"t":131,"w":10},{"s":2,"t":43,"w":10},{"s":57,"t":102,"w":10},{"s":3,"t":62,"w":10},{"s":57,"t":131,"w":10},{"s":4,"t":44,"w":10},{"s":16,"t":42,"w":10},{"s":3,"t":53,"w":10},{"s":9,"t":139,"w":10},{"s":6,"t":62,"w":10},{"s":53,"t":60,"w":10},{"s":36,"t":37,"w":10},{"s":39,"t":60,"w":10},{"s":3,"t":40,"w":10},{"s":39,"t":41,"w":10},{"s":10,"t":52,"w":10},{"s":2,"t":150,"w":10},{"s":19,"t":36,"w":10},{"s":6,"t":29,"w":10},{"s":30,"t":171,"w":10},{"s":2,"t":33,"w":10},{"s":92,"t":110,"w":10},{"s":9,"t":133,"w":10},{"s":4,"t":16,"w":10},{"s":42,"t":60,"w":10},{"s":24,"t":46,"w":10},{"s":3,"t":57,"w":10},{"s":10,"t":41,"w":10},{"s":11,"t":61,"w":10},{"s":39,"t":131,"w":10},{"s":3,"t":55,"w":10},{"s":1,"t":171,"w":10},{"s":0,"t":116,"w":10},{"s":3,"t":110,"w":10},{"s":16,"t":18,"w":10},{"s":24,"t":31,"w":9},{"s":0,"t":156,"w":9},{"s":2,"t":105,"w":9},{"s":100,"t":110,"w":9},{"s":110,"t":131,"w":9},{"s":2,"t":49,"w":9},{"s":9,"t":116,"w":9},{"s":0,"t":37,"w":9},{"s":19,"t":41,"w":9},{"s":32,"t":111,"w":9},{"s":9,"t":150,"w":9},{"s":54,"t":131,"w":9},{"s":1,"t":40,"w":9},{"s":0,"t":77,"w":9},{"s":11,"t":36,"w":9},{"s":1,"t":14,"w":9},{"s":9,"t":61,"w":9},{"s":2,"t":41,"w":9},{"s":59,"t":164,"w":9},{"s":11,"t":18,"w":9},{"s":1,"t":80,"w":9},{"s":0,"t":81,"w":9},{"s":2,"t":80,"w":9},{"s":12,"t":18,"w":9},{"s":1,"t":114,"w":9},{"s":80,"t":93,"w":9},{"s":12,"t":105,"w":9},{"s":26,"t":170,"w":9},{"s":19,"t":68,"w":9},{"s":19,"t":47,"w":9},{"s":2,"t":84,"w":9},{"s":81,"t":171,"w":9},{"s":12,"t":92,"w":9},{"s":6,"t":44,"w":9},{"s":5,"t":42,"w":9},{"s":16,"t":55,"w":9},{"s":22,"t":95,"w":9},{"s":12,"t":62,"w":9},{"s":5,"t":53,"w":9},{"s":5,"t":61,"w":9},{"s":47,"t":119,"w":9},{"s":3,"t":54,"w":9},{"s":5,"t":57,"w":9},{"s":6,"t":30,"w":9},{"s":95,"t":102,"w":9},{"s":21,"t":177,"w":9},{"s":12,"t":61,"w":9},{"s":150,"t":171,"w":8},{"s":43,"t":131,"w":8},{"s":6,"t":171,"w":8},{"s":32,"t":90,"w":8},{"s":28,"t":102,"w":8},{"s":23,"t":39,"w":8},{"s":4,"t":18,"w":8},{"s":23,"t":96,"w":8},{"s":44,"t":116,"w":8},{"s":12,"t":85,"w":8},{"s":31,"t":131,"w":8},{"s":36,"t":52,"w":8},{"s":9,"t":111,"w":8},{"s":16,"t":57,"w":8},{"s":16,"t":110,"w":8},{"s":4,"t":24,"w":8},{"s":6,"t":50,"w":8},{"s":28,"t":46,"w":8},{"s":31,"t":133,"w":8},{"s":3,"t":90,"w":8},{"s":32,"t":50,"w":8},{"s":96,"t":172,"w":8},{"s":1,"t":169,"w":8},{"s":3,"t":169,"w":8},{"s":26,"t":93,"w":8},{"s":92,"t":102,"w":8},{"s":55,"t":102,"w":8},{"s":22,"t":100,"w":8},{"s":16,"t":53,"w":8},{"s":9,"t":49,"w":8},{"s":26,"t":79,"w":8},{"s":1,"t":37,"w":8},{"s":3,"t":114,"w":8},{"s":10,"t":14,"w":8},{"s":0,"t":170,"w":8},{"s":26,"t":31,"w":8},{"s":0,"t":83,"w":8},{"s":59,"t":60,"w":8},{"s":31,"t":170,"w":8},{"s":2,"t":119,"w":8},{"s":19,"t":81,"w":8},{"s":5,"t":40,"w":8},{"s":28,"t":47,"w":8},{"s":24,"t":43,"w":8},{"s":47,"t":116,"w":8},{"s":52,"t":92,"w":8},{"s":49,"t":60,"w":8},{"s":19,"t":30,"w":8},{"s":22,"t":52,"w":8},{"s":19,"t":61,"w":8},{"s":16,"t":85,"w":8},{"s":0,"t":164,"w":8},{"s":111,"t":131,"w":8},{"s":2,"t":40,"w":8},{"s":41,"t":131,"w":8},{"s":9,"t":42,"w":8},{"s":6,"t":39,"w":8},{"s":9,"t":17,"w":8},{"s":24,"t":52,"w":8},{"s":10,"t":96,"w":8},{"s":19,"t":171,"w":8},{"s":39,"t":47,"w":8},{"s":36,"t":39,"w":8},{"s":23,"t":26,"w":8},{"s":6,"t":14,"w":8},{"s":29,"t":31,"w":7},{"s":12,"t":119,"w":7},{"s":62,"t":171,"w":7},{"s":1,"t":147,"w":7},{"s":16,"t":31,"w":7},{"s":0,"t":84,"w":7},{"s":23,"t":65,"w":7},{"s":92,"t":131,"w":7},{"s":6,"t":172,"w":7},{"s":2,"t":26,"w":7},{"s":9,"t":114,"w":7},{"s":92,"t":95,"w":7},{"s":0,"t":79,"w":7},{"s":9,"t":55,"w":7},{"s":5,"t":82,"w":7},{"s":10,"t":100,"w":7},{"s":0,"t":178,"w":7},{"s":16,"t":171,"w":7},{"s":50,"t":83,"w":7},{"s":17,"t":26,"w":7},{"s":96,"t":131,"w":7},{"s":22,"t":43,"w":7},{"s":55,"t":131,"w":7},{"s":9,"t":178,"w":7},{"s":10,"t":102,"w":7},{"s":3,"t":29,"w":7},{"s":52,"t":95,"w":7},{"s":12,"t":133,"w":7},{"s":30,"t":44,"w":7},{"s":60,"t":171,"w":7},{"s":54,"t":105,"w":7},{"s":1,"t":62,"w":7},{"s":1,"t":172,"w":7},{"s":0,"t":105,"w":7},{"s":12,"t":51,"w":7},{"s":33,"t":60,"w":7},{"s":16,"t":96,"w":7},{"s":24,"t":57,"w":7},{"s":119,"t":171,"w":7},{"s":9,"t":93,"w":7},{"s":23,"t":29,"w":7},{"s":6,"t":61,"w":7},{"s":10,"t":47,"w":7},{"s":17,"t":58,"w":7},{"s":30,"t":39,"w":7},{"s":44,"t":95,"w":7},{"s":41,"t":49,"w":7},{"s":28,"t":116,"w":7},{"s":41,"t":102,"w":7},{"s":0,"t":119,"w":7},{"s":49,"t":114,"w":7},{"s":17,"t":93,"w":7},{"s":9,"t":37,"w":7},{"s":4,"t":39,"w":7},{"s":4,"t":96,"w":7},{"s":36,"t":43,"w":7},{"s":9,"t":79,"w":7},{"s":131,"t":150,"w":7},{"s":3,"t":111,"w":7},{"s":5,"t":31,"w":7},{"s":14,"t":61,"w":7},{"s":12,"t":46,"w":7},{"s":12,"t":21,"w":7},{"s":39,"t":52,"w":7},{"s":5,"t":85,"w":7},{"s":61,"t":88,"w":7},{"s":9,"t":33,"w":7},{"s":31,"t":61,"w":7},{"s":60,"t":82,"w":7},{"s":1,"t":93,"w":7},{"s":24,"t":100,"w":7},{"s":9,"t":177,"w":7},{"s":2,"t":177,"w":7},{"s":31,"t":44,"w":6},{"s":4,"t":29,"w":6},{"s":12,"t":22,"w":6},{"s":24,"t":177,"w":6},{"s":30,"t":31,"w":6},{"s":91,"t":92,"w":6},{"s":22,"t":102,"w":6},{"s":10,"t":21,"w":6},{"s":1,"t":22,"w":6},{"s":11,"t":85,"w":6},{"s":11,"t":96,"w":6},{"s":55,"t":82,"w":6},{"s":1,"t":26,"w":6},{"s":30,"t":77,"w":6},{"s":16,"t":58,"w":6},{"s":10,"t":61,"w":6},{"s":3,"t":33,"w":6},{"s":10,"t":33,"w":6},{"s":2,"t":172,"w":6},{"s":6,"t":28,"w":6},{"s":9,"t":172,"w":6},{"s":10,"t":177,"w":6},{"s":0,"t":150,"w":6},{"s":24,"t":102,"w":6},{"s":28,"t":95,"w":6},{"s":68,"t":116,"w":6},{"s":21,"t":57,"w":6},{"s":2,"t":32,"w":6},{"s":23,"t":47,"w":6},{"s":12,"t":156,"w":6},{"s":6,"t":133,"w":6},{"s":22,"t":46,"w":6},{"s":3,"t":172,"w":6},{"s":46,"t":60,"w":6},{"s":23,"t":61,"w":6},{"s":9,"t":63,"w":6},{"s":39,"t":46,"w":6},{"s":3,"t":178,"w":6},{"s":2,"t":81,"w":6},{"s":23,"t":82,"w":6},{"s":4,"t":28,"w":6},{"s":81,"t":96,"w":6},{"s":3,"t":67,"w":6},{"s":39,"t":92,"w":6},{"s":6,"t":81,"w":6},{"s":6,"t":96,"w":6},{"s":9,"t":29,"w":6},{"s":52,"t":59,"w":6},{"s":23,"t":62,"w":6},{"s":62,"t":170,"w":6},{"s":32,"t":133,"w":6},{"s":30,"t":62,"w":6},{"s":0,"t":175,"w":6},{"s":26,"t":80,"w":6},{"s":9,"t":80,"w":6},{"s":26,"t":62,"w":6},{"s":6,"t":83,"w":6},{"s":26,"t":35,"w":6},{"s":3,"t":150,"w":6},{"s":23,"t":52,"w":6},{"s":44,"t":102,"w":6},{"s":52,"t":84,"w":6},{"s":11,"t":150,"w":6},{"s":2,"t":91,"w":6},{"s":19,"t":119,"w":6},{"s":12,"t":114,"w":6},{"s":37,"t":41,"w":6},{"s":39,"t":43,"w":6},{"s":24,"t":49,"w":6},{"s":41,"t":52,"w":6},{"s":14,"t":24,"w":6},{"s":5,"t":47,"w":6},{"s":24,"t":47,"w":6},{"s":24,"t":110,"w":6},{"s":12,"t":39,"w":6},{"s":57,"t":70,"w":6},{"s":3,"t":84,"w":6},{"s":10,"t":85,"w":6},{"s":3,"t":42,"w":6},{"s":54,"t":171,"w":6},{"s":1,"t":88,"w":6},{"s":22,"t":57,"w":6},{"s":5,"t":164,"w":6},{"s":71,"t":102,"w":6},{"s":0,"t":86,"w":6},{"s":23,"t":41,"w":6},{"s":2,"t":57,"w":6},{"s":0,"t":50,"w":6},{"s":2,"t":88,"w":6},{"s":44,"t":61,"w":6},{"s":17,"t":85,"w":6},{"s":40,"t":43,"w":6},{"s":23,"t":138,"w":6},{"s":18,"t":39,"w":6},{"s":0,"t":177,"w":5},{"s":21,"t":101,"w":5},{"s":1,"t":119,"w":5},{"s":6,"t":22,"w":5},{"s":40,"t":45,"w":5},{"s":18,"t":28,"w":5},{"s":81,"t":82,"w":5},{"s":6,"t":36,"w":5},{"s":47,"t":84,"w":5},{"s":43,"t":95,"w":5},{"s":42,"t":131,"w":5},{"s":28,"t":84,"w":5},{"s":28,"t":105,"w":5},{"s":4,"t":81,"w":5},{"s":39,"t":108,"w":5},{"s":11,"t":21,"w":5},{"s":2,"t":156,"w":5},{"s":6,"t":85,"w":5},{"s":5,"t":18,"w":5},{"s":19,"t":31,"w":5},{"s":1,"t":156,"w":5},{"s":116,"t":131,"w":5},{"s":44,"t":105,"w":5},{"s":24,"t":96,"w":5},{"s":2,"t":55,"w":5},{"s":11,"t":77,"w":5},{"s":28,"t":37,"w":5},{"s":23,"t":68,"w":5},{"s":19,"t":100,"w":5},{"s":11,"t":47,"w":5},{"s":2,"t":82,"w":5},{"s":58,"t":60,"w":5},{"s":14,"t":60,"w":5},{"s":31,"t":172,"w":5},{"s":3,"t":58,"w":5},{"s":16,"t":40,"w":5},{"s":39,"t":73,"w":5},{"s":16,"t":116,"w":5},{"s":22,"t":61,"w":5},{"s":40,"t":60,"w":5},{"s":11,"t":81,"w":5},{"s":6,"t":119,"w":5},{"s":49,"t":138,"w":5},{"s":33,"t":131,"w":5},{"s":57,"t":82,"w":5},{"s":14,"t":21,"w":5},{"s":0,"t":138,"w":5},{"s":0,"t":68,"w":5},{"s":10,"t":18,"w":5},{"s":16,"t":82,"w":5},{"s":1,"t":95,"w":5},{"s":11,"t":17,"w":5},{"s":3,"t":177,"w":5},{"s":10,"t":58,"w":5},{"s":12,"t":54,"w":5},{"s":2,"t":178,"w":5},{"s":52,"t":116,"w":5},{"s":5,"t":55,"w":5},{"s":70,"t":102,"w":5},{"s":24,"t":95,"w":5},{"s":21,"t":52,"w":5},{"s":21,"t":33,"w":5},{"s":23,"t":81,"w":5},{"s":4,"t":19,"w":5},{"s":6,"t":51,"w":5},{"s":3,"t":138,"w":5},{"s":1,"t":77,"w":5},{"s":171,"t":172,"w":5},{"s":3,"t":155,"w":5},{"s":4,"t":171,"w":5},{"s":44,"t":81,"w":5},{"s":43,"t":60,"w":5},{"s":108,"t":131,"w":5},{"s":9,"t":108,"w":5},{"s":23,"t":171,"w":5},{"s":47,"t":60,"w":5},{"s":33,"t":44,"w":5},{"s":2,"t":138,"w":5},{"s":11,"t":90,"w":5},{"s":3,"t":133,"w":5},{"s":1,"t":49,"w":5},{"s":63,"t":96,"w":5},{"s":3,"t":63,"w":5},{"s":24,"t":63,"w":5},{"s":46,"t":105,"w":5},{"s":81,"t":131,"w":5},{"s":12,"t":77,"w":5},{"s":2,"t":29,"w":5},{"s":0,"t":29,"w":5},{"s":93,"t":170,"w":5},{"s":93,"t":175,"w":5},{"s":3,"t":77,"w":5},{"s":10,"t":83,"w":5},{"s":60,"t":164,"w":5},{"s":61,"t":62,"w":5},{"s":1,"t":52,"w":5},{"s":0,"t":35,"w":5},{"s":1,"t":102,"w":5},{"s":44,"t":52,"w":5},{"s":32,"t":83,"w":5},{"s":9,"t":56,"w":5},{"s":5,"t":37,"w":5},{"s":81,"t":119,"w":5},{"s":114,"t":171,"w":5},{"s":81,"t":114,"w":5},{"s":36,"t":95,"w":5},{"s":28,"t":68,"w":5},{"s":14,"t":105,"w":5},{"s":14,"t":19,"w":5},{"s":110,"t":116,"w":5},{"s":36,"t":102,"w":5},{"s":43,"t":47,"w":5},{"s":5,"t":116,"w":5},{"s":24,"t":81,"w":5},{"s":18,"t":30,"w":5},{"s":3,"t":116,"w":5},{"s":2,"t":116,"w":5},{"s":5,"t":54,"w":5},{"s":9,"t":91,"w":5},{"s":85,"t":131,"w":5},{"s":52,"t":71,"w":5},{"s":3,"t":71,"w":5},{"s":91,"t":131,"w":5},{"s":46,"t":119,"w":5},{"s":6,"t":111,"w":5},{"s":9,"t":78,"w":5},{"s":6,"t":106,"w":5},{"s":61,"t":131,"w":5},{"s":62,"t":150,"w":5},{"s":12,"t":40,"w":5},{"s":30,"t":150,"w":5},{"s":12,"t":36,"w":5},{"s":0,"t":34,"w":5},{"s":23,"t":30,"w":5},{"s":5,"t":25,"w":5},{"s":30,"t":36,"w":4},{"s":10,"t":82,"w":4},{"s":14,"t":62,"w":4},{"s":18,"t":19,"w":4},{"s":18,"t":40,"w":4},{"s":5,"t":177,"w":4},{"s":31,"t":51,"w":4},{"s":95,"t":116,"w":4},{"s":60,"t":156,"w":4},{"s":30,"t":95,"w":4},{"s":16,"t":105,"w":4},{"s":60,"t":105,"w":4},{"s":11,"t":32,"w":4},{"s":2,"t":90,"w":4},{"s":30,"t":81,"w":4},{"s":18,"t":24,"w":4},{"s":2,"t":54,"w":4},{"s":14,"t":54,"w":4},{"s":16,"t":62,"w":4},{"s":19,"t":116,"w":4},{"s":65,"t":131,"w":4},{"s":9,"t":67,"w":4},{"s":28,"t":108,"w":4},{"s":19,"t":95,"w":4},{"s":62,"t":131,"w":4},{"s":11,"t":84,"w":4},{"s":28,"t":54,"w":4},{"s":60,"t":84,"w":4},{"s":12,"t":43,"w":4},{"s":41,"t":44,"w":4},{"s":16,"t":77,"w":4},{"s":18,"t":23,"w":4},{"s":18,"t":31,"w":4},{"s":18,"t":85,"w":4},{"s":23,"t":85,"w":4},{"s":31,"t":85,"w":4},{"s":6,"t":65,"w":4},{"s":100,"t":131,"w":4},{"s":5,"t":62,"w":4},{"s":6,"t":18,"w":4},{"s":9,"t":77,"w":4},{"s":39,"t":96,"w":4},{"s":0,"t":73,"w":4},{"s":2,"t":73,"w":4},{"s":93,"t":169,"w":4},{"s":60,"t":77,"w":4},{"s":1,"t":36,"w":4},{"s":11,"t":92,"w":4},{"s":21,"t":22,"w":4},{"s":9,"t":113,"w":4},{"s":6,"t":79,"w":4},{"s":0,"t":154,"w":4},{"s":4,"t":14,"w":4},{"s":9,"t":57,"w":4},{"s":52,"t":93,"w":4},{"s":16,"t":33,"w":4},{"s":24,"t":33,"w":4},{"s":28,"t":55,"w":4},{"s":95,"t":110,"w":4},{"s":24,"t":32,"w":4},{"s":28,"t":178,"w":4},{"s":60,"t":81,"w":4},{"s":1,"t":150,"w":4},{"s":11,"t":95,"w":4},{"s":5,"t":33,"w":4},{"s":0,"t":103,"w":4},{"s":33,"t":95,"w":4},{"s":1,"t":42,"w":4},{"s":19,"t":21,"w":4},{"s":21,"t":39,"w":4},{"s":19,"t":43,"w":4},{"s":17,"t":23,"w":4},{"s":23,"t":172,"w":4},{"s":131,"t":156,"w":4},{"s":30,"t":57,"w":4},{"s":21,"t":77,"w":4},{"s":52,"t":124,"w":4},{"s":60,"t":124,"w":4},{"s":10,"t":59,"w":4},{"s":10,"t":164,"w":4},{"s":16,"t":81,"w":4},{"s":59,"t":95,"w":4},{"s":95,"t":164,"w":4},{"s":60,"t":62,"w":4},{"s":60,"t":169,"w":4},{"s":4,"t":60,"w":4},{"s":4,"t":62,"w":4},{"s":36,"t":75,"w":4},{"s":9,"t":68,"w":4},{"s":16,"t":68,"w":4},{"s":32,"t":51,"w":4},{"s":4,"t":32,"w":4},{"s":19,"t":156,"w":4},{"s":46,"t":49,"w":4},{"s":0,"t":172,"w":4},{"s":6,"t":46,"w":4},{"s":2,"t":93,"w":4},{"s":0,"t":63,"w":4},{"s":6,"t":47,"w":4},{"s":47,"t":96,"w":4},{"s":5,"t":96,"w":4},{"s":11,"t":62,"w":4},{"s":12,"t":29,"w":4},{"s":32,"t":44,"w":4},{"s":12,"t":37,"w":4},{"s":0,"t":158,"w":4},{"s":23,"t":133,"w":4},{"s":6,"t":93,"w":4},{"s":3,"t":170,"w":4},{"s":11,"t":29,"w":4},{"s":12,"t":78,"w":4},{"s":60,"t":80,"w":4},{"s":28,"t":96,"w":4},{"s":11,"t":102,"w":4},{"s":0,"t":97,"w":4},{"s":169,"t":170,"w":4},{"s":17,"t":31,"w":4},{"s":40,"t":131,"w":4},{"s":36,"t":163,"w":4},{"s":10,"t":53,"w":4},{"s":57,"t":163,"w":4},{"s":14,"t":28,"w":4},{"s":71,"t":171,"w":4},{"s":6,"t":56,"w":4},{"s":0,"t":166,"w":4},{"s":3,"t":166,"w":4},{"s":11,"t":37,"w":4},{"s":9,"t":40,"w":4},{"s":12,"t":49,"w":4},{"s":24,"t":37,"w":4},{"s":22,"t":37,"w":4},{"s":47,"t":68,"w":4},{"s":39,"t":42,"w":4},{"s":22,"t":163,"w":4},{"s":22,"t":164,"w":4},{"s":3,"t":79,"w":4},{"s":24,"t":116,"w":4},{"s":36,"t":92,"w":4},{"s":2,"t":110,"w":4},{"s":119,"t":131,"w":4},{"s":0,"t":32,"w":4},{"s":71,"t":131,"w":4},{"s":19,"t":52,"w":4},{"s":42,"t":47,"w":4},{"s":1,"t":89,"w":4},{"s":16,"t":164,"w":4},{"s":22,"t":59,"w":4},{"s":5,"t":59,"w":4},{"s":9,"t":86,"w":4},{"s":46,"t":86,"w":4},{"s":60,"t":86,"w":4},{"s":31,"t":39,"w":4},{"s":12,"t":176,"w":4},{"s":60,"t":85,"w":4},{"s":30,"t":33,"w":4},{"s":0,"t":54,"w":4},{"s":40,"t":112,"w":4},{"s":17,"t":40,"w":4},{"s":17,"t":112,"w":4},{"s":1,"t":43,"w":4},{"s":23,"t":111,"w":4},{"s":16,"t":88,"w":4},{"s":28,"t":85,"w":4},{"s":61,"t":92,"w":4},{"s":21,"t":23,"w":4},{"s":30,"t":88,"w":4},{"s":5,"t":81,"w":4},{"s":82,"t":92,"w":4},{"s":2,"t":8,"w":4},{"s":24,"t":93,"w":4},{"s":16,"t":177,"w":4},{"s":1,"t":47,"w":4},{"s":3,"t":101,"w":4},{"s":25,"t":40,"w":4},{"s":11,"t":46,"w":4},{"s":23,"t":49,"w":3},{"s":2,"t":97,"w":3},{"s":36,"t":61,"w":3},{"s":28,"t":117,"w":3},{"s":61,"t":110,"w":3},{"s":28,"t":93,"w":3},{"s":93,"t":131,"w":3},{"s":3,"t":8,"w":3},{"s":102,"t":158,"w":3},{"s":102,"t":171,"w":3},{"s":12,"t":111,"w":3},{"s":50,"t":111,"w":3},{"s":1,"t":105,"w":3},{"s":5,"t":119,"w":3},{"s":10,"t":119,"w":3},{"s":0,"t":101,"w":3},{"s":21,"t":92,"w":3},{"s":32,"t":176,"w":3},{"s":33,"t":42,"w":3},{"s":0,"t":78,"w":3},{"s":9,"t":53,"w":3},{"s":17,"t":28,"w":3},{"s":8,"t":24,"w":3},{"s":43,"t":112,"w":3},{"s":40,"t":85,"w":3},{"s":0,"t":163,"w":3},{"s":31,"t":60,"w":3},{"s":31,"t":111,"w":3},{"s":2,"t":59,"w":3},{"s":2,"t":164,"w":3},{"s":4,"t":17,"w":3},{"s":0,"t":15,"w":3},{"s":2,"t":86,"w":3},{"s":0,"t":111,"w":3},{"s":6,"t":41,"w":3},{"s":11,"t":52,"w":3},{"s":12,"t":93,"w":3},{"s":17,"t":50,"w":3},{"s":44,"t":83,"w":3},{"s":5,"t":171,"w":3},{"s":10,"t":171,"w":3},{"s":16,"t":59,"w":3},{"s":93,"t":102,"w":3},{"s":42,"t":95,"w":3},{"s":42,"t":43,"w":3},{"s":14,"t":47,"w":3},{"s":31,"t":46,"w":3},{"s":10,"t":42,"w":3},{"s":28,"t":42,"w":3},{"s":41,"t":92,"w":3},{"s":23,"t":57,"w":3},{"s":23,"t":163,"w":3},{"s":28,"t":59,"w":3},{"s":47,"t":110,"w":3},{"s":3,"t":68,"w":3},{"s":93,"t":171,"w":3},{"s":5,"t":14,"w":3},{"s":5,"t":178,"w":3},{"s":14,"t":43,"w":3},{"s":3,"t":50,"w":3},{"s":39,"t":110,"w":3},{"s":28,"t":161,"w":3},{"s":22,"t":49,"w":3},{"s":16,"t":119,"w":3},{"s":30,"t":177,"w":3},{"s":14,"t":77,"w":3},{"s":23,"t":119,"w":3},{"s":39,"t":178,"w":3},{"s":30,"t":42,"w":3},{"s":44,"t":50,"w":3},{"s":11,"t":172,"w":3},{"s":12,"t":79,"w":3},{"s":5,"t":156,"w":3},{"s":22,"t":156,"w":3},{"s":36,"t":156,"w":3},{"s":114,"t":138,"w":3},{"s":156,"t":171,"w":3},{"s":19,"t":105,"w":3},{"s":24,"t":105,"w":3},{"s":47,"t":105,"w":3},{"s":81,"t":156,"w":3},{"s":15,"t":44,"w":3},{"s":131,"t":139,"w":3},{"s":24,"t":150,"w":3},{"s":44,"t":55,"w":3},{"s":31,"t":56,"w":3},{"s":30,"t":102,"w":3},{"s":52,"t":68,"w":3},{"s":68,"t":95,"w":3},{"s":68,"t":110,"w":3},{"s":16,"t":178,"w":3},{"s":18,"t":172,"w":3},{"s":12,"t":52,"w":3},{"s":2,"t":166,"w":3},{"s":5,"t":26,"w":3},{"s":9,"t":166,"w":3},{"s":16,"t":150,"w":3},{"s":17,"t":36,"w":3},{"s":28,"t":163,"w":3},{"s":36,"t":57,"w":3},{"s":4,"t":90,"w":3},{"s":5,"t":93,"w":3},{"s":58,"t":93,"w":3},{"s":30,"t":52,"w":3},{"s":52,"t":53,"w":3},{"s":21,"t":95,"w":3},{"s":16,"t":26,"w":3},{"s":23,"t":56,"w":3},{"s":57,"t":167,"w":3},{"s":3,"t":35,"w":3},{"s":26,"t":60,"w":3},{"s":26,"t":169,"w":3},{"s":31,"t":35,"w":3},{"s":59,"t":163,"w":3},{"s":59,"t":167,"w":3},{"s":10,"t":31,"w":3},{"s":6,"t":170,"w":3},{"s":49,"t":82,"w":3},{"s":39,"t":49,"w":3},{"s":39,"t":82,"w":3},{"s":3,"t":65,"w":3},{"s":47,"t":81,"w":3},{"s":2,"t":68,"w":3},{"s":5,"t":68,"w":3},{"s":1,"t":82,"w":3},{"s":5,"t":105,"w":3},{"s":11,"t":105,"w":3},{"s":44,"t":64,"w":3},{"s":3,"t":83,"w":3},{"s":163,"t":164,"w":3},{"s":47,"t":82,"w":3},{"s":31,"t":96,"w":3},{"s":80,"t":96,"w":3},{"s":163,"t":167,"w":3},{"s":164,"t":167,"w":3},{"s":31,"t":93,"w":3},{"s":62,"t":93,"w":3},{"s":80,"t":102,"w":3},{"s":17,"t":170,"w":3},{"s":11,"t":156,"w":3},{"s":93,"t":141,"w":3},{"s":141,"t":175,"w":3},{"s":80,"t":170,"w":3},{"s":0,"t":141,"w":3},{"s":47,"t":63,"w":3},{"s":12,"t":75,"w":3},{"s":2,"t":170,"w":3},{"s":6,"t":80,"w":3},{"s":11,"t":80,"w":3},{"s":23,"t":80,"w":3},{"s":16,"t":138,"w":3},{"s":23,"t":50,"w":3},{"s":31,"t":50,"w":3},{"s":31,"t":80,"w":3},{"s":47,"t":75,"w":3},{"s":2,"t":169,"w":3},{"s":9,"t":169,"w":3},{"s":55,"t":91,"w":3},{"s":44,"t":77,"w":3},{"s":44,"t":96,"w":3},{"s":16,"t":156,"w":3},{"s":19,"t":46,"w":3},{"s":28,"t":33,"w":3},{"s":10,"t":178,"w":3},{"s":22,"t":178,"w":3},{"s":46,"t":178,"w":3},{"s":12,"t":165,"w":3},{"s":3,"t":15,"w":3},{"s":0,"t":65,"w":3},{"s":9,"t":152,"w":3},{"s":1,"t":159,"w":3},{"s":1,"t":166,"w":3},{"s":84,"t":131,"w":3},{"s":84,"t":152,"w":3},{"s":42,"t":44,"w":3},{"s":16,"t":54,"w":3},{"s":16,"t":108,"w":3},{"s":19,"t":84,"w":3},{"s":52,"t":82,"w":3},{"s":3,"t":70,"w":3},{"s":82,"t":102,"w":3},{"s":44,"t":47,"w":3},{"s":4,"t":172,"w":3},{"s":9,"t":165,"w":3},{"s":81,"t":95,"w":3},{"s":3,"t":147,"w":3},{"s":60,"t":155,"w":3},{"s":6,"t":35,"w":3},{"s":6,"t":74,"w":3},{"s":21,"t":44,"w":3},{"s":60,"t":110,"w":3},{"s":60,"t":116,"w":3},{"s":3,"t":78,"w":3},{"s":10,"t":57,"w":3},{"s":62,"t":103,"w":3},{"s":22,"t":91,"w":3},{"s":28,"t":91,"w":3},{"s":0,"t":124,"w":3},{"s":23,"t":156,"w":3},{"s":22,"t":82,"w":3},{"s":41,"t":82,"w":3},{"s":47,"t":92,"w":3},{"s":54,"t":92,"w":3},{"s":54,"t":100,"w":3},{"s":54,"t":110,"w":3},{"s":3,"t":124,"w":3},{"s":91,"t":95,"w":3},{"s":21,"t":59,"w":3},{"s":52,"t":164,"w":3},{"s":6,"t":40,"w":3},{"s":11,"t":40,"w":3},{"s":2,"t":70,"w":3},{"s":23,"t":95,"w":3},{"s":92,"t":116,"w":3},{"s":92,"t":138,"w":3},{"s":95,"t":100,"w":3},{"s":41,"t":95,"w":3},{"s":84,"t":116,"w":3},{"s":37,"t":43,"w":3},{"s":4,"t":58,"w":3},{"s":0,"t":114,"w":3},{"s":0,"t":139,"w":3},{"s":22,"t":33,"w":3},{"s":55,"t":92,"w":3},{"s":9,"t":74,"w":3},{"s":1,"t":100,"w":3},{"s":10,"t":93,"w":3},{"s":11,"t":177,"w":3},{"s":28,"t":177,"w":3},{"s":16,"t":80,"w":3},{"s":4,"t":26,"w":3},{"s":49,"t":92,"w":3},{"s":30,"t":37,"w":3},{"s":31,"t":81,"w":3},{"s":61,"t":102,"w":3},{"s":23,"t":92,"w":3},{"s":30,"t":156,"w":3},{"s":4,"t":85,"w":3},{"s":0,"t":113,"w":3},{"s":6,"t":113,"w":3},{"s":2,"t":154,"w":3},{"s":3,"t":73,"w":3},{"s":0,"t":125,"w":3},{"s":0,"t":148,"w":3},{"s":44,"t":178,"w":3},{"s":60,"t":178,"w":3},{"s":125,"t":148,"w":3},{"s":18,"t":96,"w":3},{"s":2,"t":79,"w":3},{"s":17,"t":18,"w":3},{"s":77,"t":131,"w":3},{"s":33,"t":116,"w":3},{"s":9,"t":117,"w":3},{"s":60,"t":117,"w":3},{"s":1,"t":41,"w":3},{"s":1,"t":58,"w":3},{"s":30,"t":93,"w":3},{"s":31,"t":171,"w":3},{"s":34,"t":43,"w":3},{"s":24,"t":171,"w":3},{"s":30,"t":41,"w":3},{"s":31,"t":106,"w":3},{"s":4,"t":36,"w":3},{"s":34,"t":76,"w":3},{"s":31,"t":36,"w":3},{"s":19,"t":62,"w":3},{"s":1,"t":8,"w":3}],"stats":{"n":179,"rel":348,"text":1380,"chapters":120,"images":145}};
+const nodes = DATA.nodes, links = DATA.links, tlinks = DATA.text;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
+let alpha=1, showText=false, metric='d', labN=18, selected=-1, hover=-1;
+const COL={ '主子':'#b03a2e','妾室':'#d68910','仆役':'#2e86c1','宗族':'#7d5ba6','客卿':'#16a085','外人':'#7f8c8d' };
+const LAYER={ '亲属关系':'#b03a2e','主仆关系':'#4f81bd','社会关系':'#7fa86a' };
+const activeLayer=new Set(['亲属关系','主仆关系','社会关系']);
+
+function resize(){
+  W=cv.clientWidth; H=cv.clientHeight;
+  cv.width=W*DPR; cv.height=H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);
+resize();
+
+// 初始位置：按社群分簇（延迟到画布尺寸可用时）
+let seeded=false;
+function seedPositions(){
+  const m=Math.min(W,H)*0.42;
+  nodes.forEach((n,i)=>{
+    const a=(n.c>=0?n.c:8)/9*Math.PI*2;
+    const r=0.45+0.42*((i*37)%100)/100;
+    n.x=W/2+Math.cos(a)*r*m+(Math.random()-.5)*18;
+    n.y=H/2+Math.sin(a)*r*m+(Math.random()-.5)*18;
+    n.vx=0;n.vy=0;
+  });
+  seeded=true;
+}
+
+const val=n=>metric==='d'?n.d:metric==='b'?n.b*60:metric==='t'?n.t:n.k*4;
+function radius(n){ return 3.2+Math.sqrt(Math.max(val(n),0))*1.55; }
+
+function step(){
+  const k=Math.sqrt(W*H/Math.max(nodes.length,1))*1.05;
+  const cell=k*5.5, cell2=cell*cell;
+  for(let i=0;i<nodes.length;i++){
+    const a=nodes[i];
+    for(let j=i+1;j<nodes.length;j++){
+      const b=nodes[j];
+      let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy+0.01;
+      if(d2>cell2) continue;
+      const d=Math.sqrt(d2);
+      const f=k*k/d*0.55;
+      dx/=d; dy/=d;
+      a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
+    }
+  }
+  const spring=(s,t,w)=>{
+    const a=nodes[s], b=nodes[t];
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)+0.01;
+    const f=d*d/k*0.32*w;
+    dx/=d; dy/=d;
+    a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
+  };
+  links.forEach(l=>{ if(activeLayer.has(l.l)) spring(l.s,l.t,1.0); });
+  if(showText) tlinks.forEach(l=>{ if(l.w>=6) spring(l.s,l.t,0.10+Math.min(l.w,40)*0.006); });
+  const cx=W/2, cy=H/2;
+  nodes.forEach(n=>{
+    n.vx+=(cx-n.x)*0.004; n.vy+=(cy-n.y)*0.004;
+    n.vx*=0.80; n.vy*=0.80;
+    const m=Math.hypot(n.vx,n.vy), lim=k*0.55;
+    if(m>lim){ n.vx*=lim/m; n.vy*=lim/m; }
+    n.x+=n.vx*Math.max(alpha,0.25); n.y+=n.vy*Math.max(alpha,0.25);
+  });
+  alpha=Math.max(alpha*0.994,0.12);
+}
+const zoom={s:1,x:0,y:0};
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(zoom.x+W/2,zoom.y+H/2); ctx.scale(zoom.s,zoom.s); ctx.translate(-W/2,-H/2);
+  // 边
+  links.forEach(l=>{
+    if(!activeLayer.has(l.l)) return;
+    const a=nodes[l.s], b=nodes[l.t];
+    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.85:0.30;
+    ctx.lineWidth=(l.l==='主仆关系')?0.9:1.1;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  });
+  if(showText){
+    ctx.strokeStyle='#5d6572';
+    tlinks.forEach(l=>{
+      if(l.w<4) return;
+      const a=nodes[l.s], b=nodes[l.t];
+      ctx.globalAlpha=Math.min(0.05+l.w*0.006,0.30);
+      ctx.lineWidth=0.5;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    });
+  }
+  ctx.globalAlpha=1;
+  // 节点
+  const order=nodes.map((n,i)=>i).sort((i,j)=>radius(nodes[i])-radius(nodes[j]));
+  order.forEach(i=>{
+    const n=nodes[i], r=radius(n);
+    const hl=(i===hover||i===selected);
+    if(hl){
+      ctx.beginPath(); ctx.arc(n.x,n.y,r+7,0,7); ctx.fillStyle='rgba(200,169,106,.18)'; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(n.x,n.y,r,0,7);
+    ctx.fillStyle=COL[n.r]||'#888';
+    ctx.fill();
+    ctx.lineWidth=hl?2.2:0.8;
+    ctx.strokeStyle=hl?'#c8a96a':'rgba(10,12,16,.75)';
+    ctx.stroke();
+  });
+  // 标签
+  const top=nodes.map((n,i)=>i).sort((a,b)=>val(nodes[b])-val(nodes[a])).slice(0,labN);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  top.forEach(i=>{
+    const n=nodes[i], r=radius(n);
+    ctx.font=(r>10?'13px':'11.5px')+" 'Songti SC','SimSun',serif";
+    ctx.lineWidth=3.2; ctx.strokeStyle='rgba(8,10,14,.92)';
+    ctx.strokeText(n.n,n.x,n.y+r+9);
+    ctx.fillStyle='#e9e3d5';
+    ctx.fillText(n.n,n.x,n.y+r+9);
+  });
+  ctx.restore();
+}
+
+function recenter(){
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  nodes.forEach(n=>{x0=Math.min(x0,n.x);x1=Math.max(x1,n.x);y0=Math.min(y0,n.y);y1=Math.max(y1,n.y);});
+  const cx=(x0+x1)/2, cy=(y0+y1)/2;
+  const dx=(W/2-cx)*0.08, dy=(H/2-cy)*0.08;
+  if(Math.abs(dx)>0.1||Math.abs(dy)>0.1) nodes.forEach(n=>{n.x+=dx;n.y+=dy;});
+  const span=Math.max(x1-x0,y1-y0);
+  if(span>0){ const target=Math.min(W,H)*0.92; const k=target/span;
+    if(Math.abs(k-1)>0.02) nodes.forEach(n=>{n.x=W/2+(n.x-W/2)*Math.min(Math.max(k,0.5),2);n.y=H/2+(n.y-H/2)*Math.min(Math.max(k,0.5),2);});
+  }
+}
+function loop(){ if(cv.clientWidth>10&&cv.clientHeight>10){ if(!seeded||Math.abs(cv.clientHeight-H)>2) { resize(); if(!seeded) seedPositions(); } step(); recenter(); draw(); } requestAnimationFrame(loop); }
+
+// 交互
+let dragging=null, panning=false, last=null;
+function pos(e){
+  const r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left-zoom.x-W/2)/zoom.s+W/2;
+  const y=(e.clientY-r.top-zoom.y-H/2)/zoom.s+H/2;
+  return {x,y};
+}
+function pick(p){
+  let best=-1,bd=1e9;
+  nodes.forEach((n,i)=>{
+    const d=(n.x-p.x)**2+(n.y-p.y)**2;
+    if(d<bd && d<(radius(n)+8)**2){bd=d;best=i;}
+  });
+  return best;
+}
+cv.addEventListener('mousedown',e=>{
+  const p=pos(e); const i=pick(p);
+  if(i>=0){dragging=i;} else {panning=true; last={x:e.clientX,y:e.clientY}; cv.classList.add('drag');}
+});
+cv.addEventListener('mousemove',e=>{
+  const p=pos(e);
+  if(dragging!==null){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; n.vx=n.vy=0; alpha=Math.max(alpha,.3); }
+  else if(panning){ zoom.x+=e.clientX-last.x; zoom.y+=e.clientY-last.y; last={x:e.clientX,y:e.clientY}; }
+  else { hover=pick(p); cv.style.cursor=hover>=0?'pointer':'grab'; }
+});
+window.addEventListener('mouseup',e=>{
+  if(dragging!==null){
+    const p=pos(e);
+    if((nodes[dragging].vx===0)&&(nodes[dragging].vy===0)) select(dragging);
+    dragging=null;
+  }
+  panning=false; cv.classList.remove('drag');
+});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.12:1/1.12;
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left-W/2, my=e.clientY-r.top-H/2;
+  zoom.x=mx-(mx-zoom.x)*f; zoom.y=my-(my-zoom.y)*f;
+  zoom.s=Math.max(0.35,Math.min(4,zoom.s*f));
+},{passive:false});
+
+function select(i){
+  selected=i;
+  const n=nodes[i], d=document.getElementById('detail');
+  const rel=links.filter(l=>l.s===i||l.t===i).length;
+  document.getElementById('dbody').innerHTML=
+    (n.img?'<img src="'+n.img+'" alt="'+n.n+'">':'')+
+    '<h4>'+n.n+'</h4>'+
+    '<div class="meta">'+(n.r||'')+' · '+(n.h||'')+' · '+(n.g||'')+'</div>'+
+    (n.al?'<div class="meta" style="margin-top:6px">别名：'+n.al+'</div>':'')+
+    '<table>'+
+    '<tr><td>关系度</td><td>'+n.d+'</td></tr>'+
+    '<tr><td>介数</td><td>'+n.b.toFixed(3)+'</td></tr>'+
+    '<tr><td>k-core</td><td>'+n.k+'</td></tr>'+
+    '<tr><td>文本共现度</td><td>'+n.t+'</td></tr>'+
+    '<tr><td>出场回数</td><td>'+n.ch+'</td></tr>'+
+    (n.f?'<tr><td>结局</td><td>'+n.f+'</td></tr>':'')+
+    '<tr><td>社群</td><td>'+(n.c>=0?('#'+n.c):'—')+'</td></tr>'+
+    '</table>';
+  d.style.display='block';
+  alpha=Math.max(alpha,.3);
+}
+document.getElementById('closeD').onclick=()=>{document.getElementById('detail').style.display='none';selected=-1;};
+
+document.querySelectorAll('.rel').forEach(cb=>cb.onchange=()=>{
+  if(cb.checked) activeLayer.add(cb.value); else activeLayer.delete(cb.value);
+  alpha=1;
+});
+document.getElementById('showText').onchange=e=>{showText=e.target.checked; alpha=1;};
+document.getElementById('metric').onchange=e=>{metric=e.target.value; draw();};
+document.getElementById('lab').oninput=e=>{labN=+e.target.value; draw();};
+document.getElementById('search').oninput=e=>{
+  const q=e.target.value.trim();
+  if(!q) return;
+  const i=nodes.findIndex(n=>n.n.includes(q)||(n.al&&n.al.includes(q)));
+  if(i>=0){ select(i); zoom.s=1.6; zoom.x=-(nodes[i].x-W/2)*1.6; zoom.y=-(nodes[i].y-H/2)*1.6; }
+};
+
+// 导航高亮
+const secs=[...document.querySelectorAll('section')];
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY+120;
+  let cur=secs[0].id;
+  secs.forEach(s=>{ if(s.offsetTop<=y) cur=s.id; });
+  document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur));
+});
+
+loop();
+</script>
+</body>
+</html>
