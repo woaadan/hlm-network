@@ -128,6 +128,23 @@ for pid in persons["人物ID"]:
         feats.append(fe)
 
 im = pd.DataFrame(rows)
+
+# 经人工目视复核：以下条目的图根本不是人物像（冰纹、云盘图标、玉石、雕像、文字占位）
+NOT_PORTRAIT = {
+    "玻璃": "冰裂纹理图",
+    "彩云": "云盘 app 图标",
+    "翡翠": "玉石照片",
+    "张华": "石雕像",
+    "东平王": "骑马雕像",
+    "住儿": "纯文字占位图",
+    "庆儿": "纯文字占位图",
+}
+for i, r in im.iterrows():
+    nm_ = pid_name.get(r["人物ID"])
+    if nm_ in NOT_PORTRAIT:
+        im.at[i, "图像状态_清洗"] = "非人物像（%s）" % NOT_PORTRAIT[nm_]
+        im.at[i, "图像文件"] = None
+
 persons = persons.drop(columns=[c for c in persons.columns if c.startswith("图像状态_清洗")],
                        errors="ignore")
 persons = persons.drop(columns=["图像状态", "图像文件"], errors="ignore").merge(
@@ -135,13 +152,18 @@ persons = persons.drop(columns=["图像状态", "图像文件"], errors="ignore"
 persons.to_csv(PROC / "persons.csv", index=False, encoding="utf-8-sig")
 
 ft = pd.DataFrame(feats)
+ft = ft[~ft["人物ID"].isin({p for p, n in pid_name.items() if n in NOT_PORTRAIT})]
 ft.to_csv(PROC / "image_features.csv", index=False, encoding="utf-8-sig")
 
-# 复制到网页目录（一人一图，文件名用人物ID）
+# 复制到网页目录（一人一图，文件名用人物ID）；非人物像不复制
+excl_ids = {pid for pid, n in pid_name.items() if n in NOT_PORTRAIT}
 for pid, f in assign.items():
-    src = IMG / f
     dst = DOCS / "img" / (pid + ".jpg")
-    dst.write_bytes(src.read_bytes())
+    if pid in excl_ids:
+        if dst.exists():
+            dst.unlink()
+        continue
+    dst.write_bytes((IMG / f).read_bytes())
 
 print("图像状态：", persons["图像状态_清洗"].value_counts().to_dict())
 print("冲突组数：", len(conflict_groups))
@@ -151,3 +173,4 @@ print("特征表：", ft.shape, "列：", list(ft.columns))
 print(ft[["brightness", "saturation", "colorfulness", "edge_density"]].describe().round(3).to_string())
 json.dump([dict(md5=g[0], members=g[1], keeper=g[2]) for g in conflict_groups],
           open(PROC / "image_conflicts.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+

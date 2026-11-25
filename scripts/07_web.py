@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
 import sys, io, json
 from pathlib import Path
@@ -58,91 +58,7 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>红楼梦人物网络 · 多模态分析</title>
 <style>
-:root{
-  --bg:#0e1014; --bg2:#14171d; --card:#1a1e26; --line:#2a303b;
-  --fg:#e9e3d5; --dim:#9aa3b2; --gold:#c8a96a; --red:#b03a2e; --blue:#4f81bd;
-  --green:#7fa86a; --purple:#7d5ba6;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
-  font-family:"Songti SC","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
-  line-height:1.8;-webkit-font-smoothing:antialiased}
-a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(200,169,106,.3)}
-a:hover{border-bottom-color:var(--gold)}
-.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
-header{position:relative;padding:86px 0 54px;text-align:center;
-  background:radial-gradient(ellipse at 50% 0%,#20242d 0%,#0e1014 62%)}
-header .seal{display:inline-block;width:66px;height:66px;line-height:66px;border:2px solid var(--red);
-  color:var(--red);font-size:26px;letter-spacing:2px;margin-bottom:22px;border-radius:4px;
-  transform:rotate(-3deg)}
-h1{font-size:clamp(30px,4.6vw,52px);margin:0 0 12px;letter-spacing:.16em;font-weight:400}
-.sub{color:var(--dim);font-size:15px;letter-spacing:.08em}
-.kpis{display:flex;flex-wrap:wrap;justify-content:center;gap:38px;margin-top:38px}
-.kpi b{display:block;font-size:30px;color:var(--gold);font-weight:400}
-.kpi span{font-size:12.5px;color:var(--dim);letter-spacing:.12em}
-nav{position:sticky;top:0;z-index:50;background:rgba(14,16,20,.92);backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--line)}
-nav .wrap{display:flex;gap:22px;overflow-x:auto;padding:12px 22px;font-size:13.5px}
-nav a{color:var(--dim);border:none;white-space:nowrap;letter-spacing:.06em}
-nav a:hover,nav a.on{color:var(--gold)}
-section{scroll-margin-top:58px;padding:58px 0;border-bottom:1px solid rgba(42,48,59,.55)}
-h2{font-size:24px;font-weight:400;letter-spacing:.1em;margin:0 0 6px}
-h2 .num{color:var(--red);font-size:13px;letter-spacing:.2em;display:block;margin-bottom:8px}
-.lead{color:var(--dim);max-width:760px;margin-bottom:26px}
-h3{font-size:16.5px;font-weight:400;color:var(--gold);margin:26px 0 8px;letter-spacing:.06em}
-p{font-size:15px;color:#d7d1c4}
-.small{font-size:13px;color:var(--dim)}
-.grid{display:grid;gap:16px}
-.g2{grid-template-columns:repeat(2,1fr)}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g4{grid-template-columns:repeat(4,1fr)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:18px 20px}
-.card b{color:var(--gold);font-weight:400}
-.card .big{font-size:26px;color:var(--fg);display:block;margin-bottom:4px}
-.card.smallp p{margin:6px 0 0;font-size:13.5px;color:var(--dim)}
-figure{margin:26px 0}
-figure img{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}
-figcaption{font-size:13px;color:var(--dim);margin-top:9px;line-height:1.7}
-#net-wrap{position:relative;background:#0b0d10;border:1px solid var(--line);border-radius:10px;
-  overflow:hidden;height:min(76vh,720px)}
-canvas{display:block;width:100%;height:100%;cursor:grab}
-canvas.drag{cursor:grabbing}
-.panel{position:absolute;top:14px;left:14px;background:rgba(20,23,29,.93);border:1px solid var(--line);
-  border-radius:9px;padding:12px 14px;font-size:12.5px;width:206px;backdrop-filter:blur(6px)}
-.panel label{display:flex;align-items:center;gap:7px;color:#c9c3b6;cursor:pointer;margin:4px 0}
-.panel input[type=checkbox]{accent-color:#c8a96a}
-.panel .row{display:flex;gap:6px;margin-top:9px}
-.panel input[type=range]{width:100%;accent-color:#c8a96a}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#c9c3b6}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
-#search{width:100%;background:#0e1014;border:1px solid var(--line);color:var(--fg);
-  border-radius:6px;padding:6px 8px;font-size:12.5px;margin-top:8px;font-family:inherit}
-#detail{position:absolute;top:14px;right:14px;width:246px;background:rgba(20,23,29,.95);
-  border:1px solid var(--line);border-radius:9px;padding:14px;display:none;backdrop-filter:blur(6px)}
-#detail img{width:100%;border-radius:6px;margin-bottom:10px;max-height:230px;object-fit:cover}
-#detail h4{margin:0;font-size:19px;font-weight:400;letter-spacing:.06em}
-#detail .meta{font-size:12px;color:var(--dim);margin-top:4px}
-#detail table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
-#detail td{padding:3px 0;border-bottom:1px solid rgba(42,48,59,.7)}
-#detail td:last-child{text-align:right;color:var(--gold)}
-#detail .close{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--dim);font-size:16px}
-.hint{position:absolute;bottom:10px;left:14px;font-size:11.5px;color:#5d6572}
-table.data{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
-table.data th{text-align:left;color:var(--gold);font-weight:400;border-bottom:1px solid var(--line);
-  padding:8px 10px;letter-spacing:.05em}
-table.data td{padding:8px 10px;border-bottom:1px solid rgba(42,48,59,.5);color:#cfc9bc;vertical-align:top}
-table.data tr:hover td{background:rgba(255,255,255,.02)}
-code{background:#151a21;padding:1.5px 6px;border-radius:4px;font-size:13px;color:#d8c7a0;
-  font-family:"JetBrains Mono",Consolas,monospace}
-pre{background:#0b0e12;border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;
-  font-size:12.5px;color:#cfc9bc}
-blockquote{border-left:2px solid var(--red);margin:18px 0;padding:2px 0 2px 16px;color:#cfc9bc;
-  font-size:14.5px}
-footer{padding:44px 0 60px;color:var(--dim);font-size:13px;text-align:center}
-.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border:1px solid var(--line);
-  border-radius:99px;color:var(--dim);margin-right:6px}
-@media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}
-  #detail{width:200px}#net-wrap{height:70vh}}
+__CSS__
 </style>
 </head>
 <body>
@@ -213,20 +129,20 @@ footer{padding:44px 0 60px;color:var(--dim);font-size:13px;text-align:center}
   <div id="net-wrap">
     <canvas id="cv"></canvas>
     <div class="panel">
-      <div style="color:#c8a96a;margin-bottom:6px">图层</div>
+      <div style="color:#9a6a32;margin-bottom:6px">图层</div>
       <label><input type="checkbox" class="rel" value="亲属关系" checked><span class="dot" style="background:#b03a2e"></span>亲属关系</label>
       <label><input type="checkbox" class="rel" value="主仆关系" checked><span class="dot" style="background:#4f81bd"></span>主仆关系</label>
       <label><input type="checkbox" class="rel" value="社会关系" checked><span class="dot" style="background:#7fa86a"></span>社会关系</label>
       <label><input type="checkbox" id="showText"><span class="dot" style="background:#4a5260"></span>文本同场共现</label>
       <label><input type="checkbox" id="showIso"><span class="dot" style="background:#5d6572"></span>孤岛人物（65）</label>
-      <div style="color:#c8a96a;margin:12px 0 4px">节点大小</div>
+      <div style="color:#9a6a32;margin:12px 0 4px">节点大小</div>
       <div class="row">
-        <select id="metric" style="width:100%;background:#0e1014;color:#e9e3d5;border:1px solid #2a303b;border-radius:6px;padding:5px;font-size:12px;font-family:inherit">
+        <select id="metric" style="width:100%;background:#fbf7ee;color:#2b2723;border:1px solid #e2d7c3;border-radius:7px;padding:6px;font-size:14px;font-family:inherit">
           <option value="d">关系度数</option><option value="b">介数中心性</option>
           <option value="t">文本共现度</option><option value="k">k-core</option>
         </select>
       </div>
-      <div style="color:#c8a96a;margin:12px 0 4px">标签密度</div>
+      <div style="color:#9a6a32;margin:12px 0 4px">标签密度</div>
       <input type="range" id="lab" min="0" max="40" value="14">
       <input id="search" placeholder="搜索人物…">
       <div style="margin-top:10px"><span class="chip"><span class="dot" style="background:#b03a2e"></span>主子</span>
@@ -307,12 +223,12 @@ footer{padding:44px 0 60px;color:var(--dim);font-size:13px;text-align:center}
 
 <section id="visual"><div class="wrap">
   <h2><span class="num">07 / IMAGE MODALITY</span>脸能不能解释位置</h2>
-  <p class="lead">178 张剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
+  <p class="lead">141 张可确认的人物剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
   结论有点扫兴但很诚实：<b>视觉特征与网络位置几乎不相关</b>（度—饱和度 r=__CS__，度—亮度 r=__CB__）。</p>
   <figure><img src="figures/fig8_visual_modality.png" alt="图像模态">
   <figcaption>主子与仆役剧照的亮度、饱和度差异均不显著（Mann-Whitney p=__PB__ / __PS__）；
   唯一显著的是边缘密度（p=__PE__），可能来自构图景别而非身份。右图揭示真正的偏差：
-  <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子。</figcaption></figure>
+  <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子；另有 7 张根本不是人像（书封、云盘图标、玉石、雕像、文字占位），已剔除。</figcaption></figure>
   <figure><img src="figures/fig10_persona_cards.png" alt="人物卡">
   <figcaption>多模态人物卡：剧照（图像）＋ 度/介数（网络）＋ 出场回数（文本）。</figcaption></figure>
   <p class="small">说明：原始图源分为 87 版剧照、工笔/绣像与带水印的网络图片三类，年代与风格不统一，
@@ -435,16 +351,16 @@ function draw(){
   links.forEach(l=>{
     if(!activeLayer.has(l.l)) return;
     const a=nodes[l.s], b=nodes[l.t];
-    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.85:0.30;
-    ctx.lineWidth=(l.l==='主仆关系')?0.9:1.1;
+    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.95:0.52;
+    ctx.lineWidth=(l.l==='主仆关系')?1.1:1.35;
     ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
   });
   if(showText){
-    ctx.strokeStyle='#5d6572';
+    ctx.strokeStyle='#b3a58c';
     tlinks.forEach(l=>{
       if(l.w<4) return;
       const a=nodes[l.s], b=nodes[l.t];
-      ctx.globalAlpha=Math.min(0.05+l.w*0.006,0.30);
+      ctx.globalAlpha=Math.min(0.06+l.w*0.008,0.38);
       ctx.lineWidth=0.5;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     });
@@ -457,13 +373,13 @@ function draw(){
     if(!showIso && n.d===0) return;
     const hl=(i===hover||i===selected);
     if(hl){
-      ctx.beginPath(); ctx.arc(n.x,n.y,r+7,0,7); ctx.fillStyle='rgba(200,169,106,.18)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(n.x,n.y,r+7,0,7); ctx.fillStyle='rgba(164,52,42,.14)'; ctx.fill();
     }
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,7);
     ctx.fillStyle=COL[n.r]||'#888';
     ctx.fill();
     ctx.lineWidth=hl?2.2:0.8;
-    ctx.strokeStyle=hl?'#c8a96a':'rgba(10,12,16,.75)';
+    ctx.strokeStyle=hl?'#a4342a':'rgba(255,253,248,.92)';
     ctx.stroke();
   });
   // 标签
@@ -472,9 +388,9 @@ function draw(){
   top.forEach(i=>{
     const n=nodes[i], r=radius(n);
     ctx.font=(r>10?'13px':'11.5px')+" 'Songti SC','SimSun',serif";
-    ctx.lineWidth=3.2; ctx.strokeStyle='rgba(8,10,14,.92)';
+    ctx.lineWidth=3.4; ctx.strokeStyle='rgba(247,243,234,.96)';
     ctx.strokeText(n.n,n.x,n.y+r+9);
-    ctx.fillStyle='#e9e3d5';
+    ctx.fillStyle='#2b2723';
     ctx.fillText(n.n,n.x,n.y+r+9);
   });
   ctx.restore();
@@ -599,7 +515,8 @@ loop();
 </html>
 """
 
-html = (HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False, separators=(",", ":")))
+html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read_text(encoding="utf-8"))
+            .replace("__DATA__", json.dumps(DATA, ensure_ascii=False, separators=(",", ":")))
             .replace("__N__", str(len(nodes))).replace("__REL__", str(len(links)))
             .replace("__TEXT__", str(len(tl))).replace("__IMG__", str(DATA["stats"]["images"]))
             .replace("__ZERO__", str(ev["zero"])).replace("__MED__", str(int(ev["median"])))
@@ -619,6 +536,8 @@ html = (HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False, separators
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
+
 
 
 

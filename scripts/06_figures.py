@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """静态图：网络总览、中心性、社群、时序、跨模态、人物卡。"""
 import sys, io, json, math
 from pathlib import Path
@@ -13,7 +13,7 @@ from PIL import Image
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent))
-from lib_common import PROC, FIG, DOCS, RAW, setup_font, LAYER_COLOR, ROLE_COLOR
+from lib_common import PROC, FIG, DOCS, RAW, setup_font, LAYER_COLOR, ROLE_COLOR, PAPER
 from lib_layout import forceatlas2
 
 setup_font()
@@ -46,7 +46,8 @@ CMAP = ["#B03A2E", "#2E86C1", "#229954", "#D68910", "#7D3C98",
 
 def save(fig, fn):
     for d in (FIG, DOCS / "figures"):
-        fig.savefig(d / fn, facecolor="white")
+        fig.patch.set_facecolor(PAPER)
+        fig.savefig(d / fn, facecolor=PAPER)
     plt.close(fig)
     print("saved", fn)
 
@@ -62,13 +63,13 @@ def f1():
     sizes = [90 + 95 * G.degree(n) for n in H]
     colors = [CMAP[COMM.get(n, 0) % len(CMAP)] for n in H]
     nx.draw_networkx_nodes(H, pos, node_size=sizes, node_color=colors,
-                           edgecolors="white", linewidths=1.2, alpha=0.95, ax=ax)
+                           edgecolors=PAPER, linewidths=1.2, alpha=0.95, ax=ax)
     top = set(nm.nlargest(26, "度")["人物ID"])
     for n, (x, y) in pos.items():
         if n in top:
             ax.text(x, y, name[n], fontsize=8.4, ha="center", va="center",
                     color="#111111", zorder=10,
-                    path_effects=[pe.withStroke(linewidth=2.6, foreground="white")])
+                    path_effects=[pe.withStroke(linewidth=2.6, foreground=PAPER)])
     ax.set_axis_off()
     ax.set_title("《红楼梦》人物关系网络（亲属 / 主仆 / 社会 三层）\n"
                  "巨连通块 %d 人 · %d 条关系 · 9 个社群（模块度 %.2f）；另 %d 人散在小圈子"
@@ -127,11 +128,11 @@ def f2():
     for n in H:
         if G.degree(n) >= 6:
             ax.text(pos[n][0], pos[n][1], name[n], fontsize=8.2, ha="center", va="center",
-                    zorder=12, path_effects=[pe.withStroke(linewidth=2.6, foreground="white")])
+                    zorder=12, path_effects=[pe.withStroke(linewidth=2.6, foreground=PAPER)])
     for n in placed:
         r = pos[n] * 1.055
         ax.text(r[0], r[1], name[n], fontsize=6.8, ha="center", va="center", color="#4D5656",
-                zorder=12, path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+                zorder=12, path_effects=[pe.withStroke(linewidth=2.2, foreground=PAPER)])
     ax.set_xlim(-1.42, 1.42)
     ax.set_ylim(-1.36, 1.36)
     ax.set_axis_off()
@@ -224,7 +225,7 @@ def f5():
 
     ax2.scatter(nm["度"], nm["介数"] + 1e-4, s=28,
                 c=[ROLE_COLOR.get(r, "#999") for r in nm["身份类别"]], alpha=0.85,
-                edgecolors="white", linewidths=0.6)
+                edgecolors=PAPER, linewidths=0.6)
     for _, r in nm.nlargest(8, "介数").iterrows():
         ax2.annotate(r["标准名"], (r["度"], r["介数"]), fontsize=9,
                      xytext=(4, 3), textcoords="offset points")
@@ -288,7 +289,7 @@ def f7():
     both["name"] = [name.get(i, i) for i in both.index]
     fig, ax = plt.subplots(figsize=(9.5, 8))
     ax.scatter(both["前80"] + 1, both["后40"] + 1, s=26, color="#2E86C1", alpha=0.7,
-               edgecolors="white", linewidths=0.5)
+               edgecolors=PAPER, linewidths=0.5)
     lim = max(both["前80"].max(), both["后40"].max()) * 1.3 + 2
     ax.plot([1, lim], [1, lim], ls="--", color="#999999", lw=1)
     for _, r in both.nlargest(12, "前80").iterrows():
@@ -435,4 +436,5 @@ for fn in (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11):
         import traceback
         print("!! %s 失败：" % fn.__name__, e)
         traceback.print_exc()
+
 
