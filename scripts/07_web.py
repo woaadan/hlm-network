@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
 import sys, io, json
 from pathlib import Path
@@ -145,6 +145,7 @@ __CSS__
       <div style="color:#9a6a32;margin:12px 0 4px">标签密度</div>
       <input type="range" id="lab" min="0" max="40" value="14">
       <input id="search" placeholder="搜索人物…">
+      <button id="relayout" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:1px solid #e2d7c3;background:#f7f3ea;color:#6f6657;font-family:inherit;font-size:13.5px;cursor:pointer">重新布局</button>
       <div style="margin-top:10px"><span class="chip"><span class="dot" style="background:#b03a2e"></span>主子</span>
       <span class="chip"><span class="dot" style="background:#d68910"></span>妾室</span>
       <span class="chip"><span class="dot" style="background:#2e86c1"></span>仆役</span>
@@ -163,6 +164,11 @@ __CSS__
   <figure><img src="figures/fig1_relation_network.png" alt="关系网络">
   <figcaption>巨连通块 109 人、159 条关系，按 Louvain 社群着色。可以看到荣国府一侧几乎被王夫人、贾母、
   贾政、宝玉切成若干“院”，宁国府（绿）与薛家（橙）各自成团。</figcaption></figure>
+
+  <figure><img src="figures/fig12_layers.png" alt="三层分解">
+  <figcaption>把同一张图按关系大类拆成三层：<b>亲属层 76 人 / 104 边</b>是骨架，
+  <b>主仆层 53 人 / 39 边</b>是若干放射状“星”（每个主子挂一串丫鬟小厮），
+  <b>社会层只有 19 人 / 16 边</b>——所谓“朋友”在这部小说里是稀缺资源。</figcaption></figure>
   <div class="grid g3">
     <div class="card smallp"><b>贾宝玉</b><p>度 28、介数 0.214、有效规模 26.5、约束度 0.063——他是唯一横跨亲属、主仆、社会三层的枢纽，
     “结构洞”几乎全部经由他打通。</p></div>
@@ -174,9 +180,22 @@ __CSS__
   <figure><img src="figures/fig3_centrality.png" alt="中心性">
   <figcaption>三把尺子量同一个人：宝玉在三种口径下都第一；王熙凤 PageRank 低于贾母但介数接近，
   说明她“影响大而路径短”；贾政度很高但介数偏低——他是“门面”而非“通道”。</figcaption></figure>
+
+  <figure><img src="figures/fig15_centrality_heatmap.png" alt="中心性热图">
+  <figcaption>24 位主要人物的六种中心性并排（列内归一化）。贾宝玉整行几乎全亮；
+  王夫人「介数高、度中」；贾惜春「度低、介数高」——三处不一致本身就是结论：
+  不同中心性测的是“位置”的不同侧面。</figcaption></figure>
   <figure><img src="figures/fig5_core_periphery.png" alt="核心边缘">
   <figcaption>k-core 只有 3 层，说明这部小说的人物网络“薄而宽”：核心并非层层嵌套，而是一个扁平的核心圈
   加大量依附其上的卫星人物。</figcaption></figure>
+
+  <figure><img src="figures/fig13_degree_dist.png" alt="度分布">
+  <figcaption>两种网络的不同“形状”：关系层是重尾（多数人 1–2 个关系，极少数人二三十个），
+  文本同场层则接近均匀——因为“同场”是场景决定的，人人都有机会出场。</figcaption></figure>
+
+  <figure><img src="figures/fig14_cutpoints.png" alt="割点">
+  <figcaption>拿掉贾宝玉：巨连通块从 109 人掉到 96 人，另外裂出 9 块小碎片。
+  这些碎片不是别的人物，正是只经由宝玉与外界相连的丫鬟、小厮与外客。</figcaption></figure>
 </div></section>
 
 <section id="comm"><div class="wrap">
@@ -340,7 +359,7 @@ function step(){
     if(m>lim){ n.vx*=lim/m; n.vy*=lim/m; }
     n.x+=n.vx*Math.max(alpha,0.25); n.y+=n.vy*Math.max(alpha,0.25);
   });
-  alpha=Math.max(alpha*0.994,0.12);
+  alpha*=0.972; if(alpha<0.01) alpha=0;
 }
 const zoom={s:1,x:0,y:0};
 function draw(){
@@ -417,7 +436,7 @@ function recenter(){
     if(Math.abs(k-1)>0.02) nodes.forEach(n=>{n.x=W/2+(n.x-W/2)*Math.min(Math.max(k,0.5),2);n.y=H/2+(n.y-H/2)*Math.min(Math.max(k,0.5),2);});
   }
 }
-function loop(){ if(cv.clientWidth>10&&cv.clientHeight>10){ if(!seeded||Math.abs(cv.clientHeight-H)>2) { resize(); if(!seeded) seedPositions(); } step(); if(showIso) placeIso(); recenter(); draw(); } requestAnimationFrame(loop); }
+function loop(){ if(cv.clientWidth>10&&cv.clientHeight>10){ if(!seeded||Math.abs(cv.clientHeight-H)>2) { resize(); if(!seeded) seedPositions(); } if(alpha>0){ step(); if(showIso) placeIso(); if(alpha>0.3) recenter(); } draw(); } requestAnimationFrame(loop); }
 
 // 交互
 let dragging=null, panning=false, last=null;
@@ -441,7 +460,7 @@ cv.addEventListener('mousedown',e=>{
 });
 cv.addEventListener('mousemove',e=>{
   const p=pos(e);
-  if(dragging!==null){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; n.vx=n.vy=0; alpha=Math.max(alpha,.3); }
+  if(dragging!==null){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; n.vx=n.vy=0; alpha=0.55; }
   else if(panning){ zoom.x+=e.clientX-last.x; zoom.y+=e.clientY-last.y; last={x:e.clientX,y:e.clientY}; }
   else { hover=pick(p); cv.style.cursor=hover>=0?'pointer':'grab'; }
 });
@@ -489,8 +508,8 @@ document.querySelectorAll('.rel').forEach(cb=>cb.onchange=()=>{
   if(cb.checked) activeLayer.add(cb.value); else activeLayer.delete(cb.value);
   alpha=1;
 });
-document.getElementById('showText').onchange=e=>{showText=e.target.checked; alpha=1;};
-document.getElementById('showIso').onchange=e=>{showIso=e.target.checked; placeIso(); alpha=1;};
+document.getElementById('showText').onchange=e=>{showText=e.target.checked; alpha=0.8;};
+document.getElementById('showIso').onchange=e=>{showIso=e.target.checked; placeIso(); alpha=0.8;};
 document.getElementById('metric').onchange=e=>{metric=e.target.value; draw();};
 document.getElementById('lab').oninput=e=>{labN=+e.target.value; draw();};
 document.getElementById('search').oninput=e=>{
@@ -499,6 +518,8 @@ document.getElementById('search').oninput=e=>{
   const i=nodes.findIndex(n=>n.n.includes(q)||(n.al&&n.al.includes(q)));
   if(i>=0){ select(i); zoom.s=1.6; zoom.x=-(nodes[i].x-W/2)*1.6; zoom.y=-(nodes[i].y-H/2)*1.6; }
 };
+
+document.getElementById('relayout').onclick=()=>{ seedPositions(); alpha=1; };
 
 // 导航高亮
 const secs=[...document.querySelectorAll('section')];
@@ -536,6 +557,7 @@ html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
 
 
 
