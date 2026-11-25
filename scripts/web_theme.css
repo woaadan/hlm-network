@@ -111,3 +111,37 @@ footer{padding:48px 0 64px;color:var(--dim);font-size:15px;text-align:center;
 @media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr}
   #detail{width:210px}#net-wrap{height:72vh}
   html,body{font-size:17px}}
+
+/* ---------- 交互控件 ---------- */
+.tools{position:absolute;bottom:14px;left:14px;display:flex;gap:6px;align-items:center;
+  background:rgba(255,253,248,.96);border:1px solid var(--line);border-radius:9px;
+  padding:6px 9px;font-size:13px;box-shadow:0 6px 22px rgba(120,95,55,.12);z-index:6}
+.tools button{border:1px solid var(--line);background:#fbf8f1;color:#6f6657;border-radius:6px;
+  padding:4px 11px;cursor:pointer;font-family:inherit;font-size:13px;transition:.15s}
+.tools button:hover{border-color:#c9b79a}
+.tools button.on{background:var(--red);color:#fff;border-color:var(--red)}
+#toolhint{margin-left:4px;color:#8f8474;font-size:12px;max-width:230px}
+.timebar{position:absolute;bottom:14px;right:14px;width:330px;background:rgba(255,253,248,.96);
+  border:1px solid var(--line);border-radius:9px;padding:8px 12px;
+  box-shadow:0 6px 22px rgba(120,95,55,.12);z-index:6}
+.timebar input[type=range]{width:100%;accent-color:var(--red)}
+.timebar .row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:#6f6657;margin-top:2px}
+.timebar button{border:1px solid var(--line);background:#fbf8f1;color:#6f6657;border-radius:6px;
+  padding:2px 9px;cursor:pointer;font-family:inherit;font-size:12px}
+.commlegend{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.commlegend .cl{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:1px 8px;
+  border:1px solid var(--line);border-radius:99px;cursor:pointer;color:#4a443a;user-select:none}
+.commlegend .cl i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.commlegend .cl.off{opacity:.32;text-decoration:line-through}
+.tip{position:absolute;display:none;pointer-events:none;background:rgba(255,253,248,.98);
+  border:1px solid var(--line);border-radius:7px;padding:7px 11px;font-size:12.5px;
+  box-shadow:0 6px 20px rgba(120,95,55,.16);z-index:8}
+.tip b{display:block;font-size:14.5px;color:var(--ink);font-weight:400}
+.tip span{color:#8f8474}
+#detail{max-height:calc(100% - 28px);overflow:auto}
+.rellist{max-height:170px;overflow:auto;font-size:12.5px;margin-top:4px}
+.relttl{margin-top:12px;font-size:12px;color:var(--red);letter-spacing:.08em}
+.relrow{display:flex;justify-content:space-between;gap:8px;padding:3px 4px;
+  border-bottom:1px dashed rgba(228,217,198,.85);cursor:pointer;color:#4a443a}
+.relrow:hover{background:rgba(164,52,42,.06)}
+.relrow span{color:#9a6a32}

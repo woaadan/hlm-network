@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
 import sys, io, json, math
 from pathlib import Path
@@ -64,7 +64,10 @@ for nd in nodes:
     nd["nx"] = round(x / mx, 4)
     nd["ny"] = round(y / mx, 4)
 
-DATA = dict(nodes=nodes, links=links, text=tl,
+cast_raw = json.load(open(PROC / "chapter_cast.json", encoding="utf-8"))
+CAST = {int(k): [idx[x] for x in v if x in idx] for k, v in cast_raw.items()}
+
+DATA = dict(nodes=nodes, links=links, text=tl, cast=CAST,
             stats=dict(n=len(nodes), rel=len(links), text=len(tl),
                        chapters=120, images=int((live["图像状态_清洗"].isin(
                            ["正常", "别名同图", "占位（同图待核）"])).sum())))
@@ -147,8 +150,8 @@ __CSS__
 
 <section id="graph"><div class="wrap">
   <h2><span class="num">02 / INTERACTIVE GRAPH</span>把它转起来</h2>
-  <p class="lead">节点颜色=身份，大小=所选指标；边为关系三层。勾选“文本同场”可叠加第四层。
-  点击任意人物查看画像与指标，滚轮缩放、拖拽移动。</p>
+  <p class="lead">节点颜色=身份，大小=所选指标；边为关系三层。<b>三种模式</b>：浏览（点人物看卡片与直接关系）、
+  路径（点两人找最短关系链）、移除（点人物把他拿掉，看网络断成几块）。底部时间轴可按回筛选出场人物，并支持自动播放。</p>
   <div id="net-wrap">
     <canvas id="cv"></canvas>
     <div class="panel">
@@ -168,6 +171,8 @@ __CSS__
       <div class="ttl">标签密度</div>
       <input type="range" id="lab" min="0" max="40" value="14">
       <input id="search" placeholder="搜索人物…">
+      <div class="ttl">社群筛选</div>
+      <div id="commlegend" class="commlegend"></div>
       <div style="margin-top:10px"><span class="chip"><span class="dot" style="background:#b03a2e"></span>主子</span>
       <span class="chip"><span class="dot" style="background:#d68910"></span>妾室</span>
       <span class="chip"><span class="dot" style="background:#2e86c1"></span>仆役</span>
@@ -175,7 +180,18 @@ __CSS__
       <span class="chip"><span class="dot" style="background:#7f8c8d"></span>外人</span></div>
     </div>
     <div id="detail"><span class="close" id="closeD">×</span><div id="dbody"></div></div>
-    <div class="hint">固定布局（非力模拟）· 滚轮缩放 · 拖拽平移 · 点击查看人物卡</div>
+    <div class="tools">
+      <button data-mode="browse" class="on">浏览</button>
+      <button data-mode="path">路径</button>
+      <button data-mode="remove">移除</button>
+      <span id="toolhint">点击人物查看卡片</span>
+    </div>
+    <div class="timebar">
+      <input type="range" id="chap" min="0" max="120" value="0">
+      <div class="row"><span id="chaplab">全部 120 回</span>
+        <span><button id="play">▶ 播放</button> <button id="resetView">复位</button></span></div>
+    </div>
+    <div class="tip" id="tip"></div>
   </div>
 </div></section>
 
@@ -342,13 +358,19 @@ python scripts/07_web.py       # 生成本页</pre>
 
 <script>
 const DATA = __DATA__;
-const nodes = DATA.nodes, links = DATA.links, tlinks = DATA.text;
+const nodes = DATA.nodes, links = DATA.links, tlinks = DATA.text, CAST = DATA.cast;
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W=0, H=0, DPR=Math.min(window.devicePixelRatio||1,2);
 let showText=false, showIso=false, metric='d', labN=14, selected=-1, hover=-1, dragging=-1;
+let mode='browse', chap=0, castSet=null, pathA=-1, pathB=-1, pathSeq=[], pathSet=new Set();
+const removed=new Set(), commOff=new Set();
 const COL={ '主子':'#a4342a','妾室':'#c9862b','仆役':'#3d6a8f','宗族':'#7a5a95','客卿':'#3f8f7a','外人':'#8a8071' };
 const LAYER={ '亲属关系':'#b0504a','主仆关系':'#4a7ba3','社会关系':'#7d9459' };
+const COMMCOL=['#a4342a','#3d6a8f','#5f7f4a','#9a6a32','#7a5a95','#3f8f7a','#b0603a','#6b7280','#a0486e'];
 const activeLayer=new Set(['亲属关系','主仆关系','社会关系']);
+
+const cvWrap=document.getElementById('net-wrap');
+const tip=document.getElementById('tip'), toolhint=document.getElementById('toolhint');
 
 function resize(){
   W=cv.clientWidth; H=cv.clientHeight;
@@ -357,51 +379,112 @@ function resize(){
   applyLayout();
 }
 function applyLayout(){
-  const s=Math.min(W,H)*0.455;
-  nodes.forEach(n=>{ n.x=W/2+n.nx*s; n.y=H/2+n.ny*s; });
+  const s=Math.min(W,H)*0.47;
+  const ox=W>900?70:0;
+  nodes.forEach(n=>{ n.x=W/2+ox+n.nx*s; n.y=H/2+n.ny*s; });
 }
 window.addEventListener('resize',resize);
 
+function visible(n){
+  if(removed.has(n.id)) return false;
+  if(castSet && !castSet.has(n.id)) return false;
+  if(commOff.has(n.c)) return false;
+  if(!showIso && n.d===0) return false;
+  return true;
+}
 const val=n=>metric==='d'?n.d:metric==='b'?n.b*60:metric==='t'?n.t:n.k*4;
 function radius(n){ return 3.6+Math.sqrt(Math.max(val(n),0))*1.7; }
+
+// -------- 邻接（供路径与聚焦）--------
+let adj=null;
+function buildAdj(){
+  adj=nodes.map(()=>[]);
+  links.forEach((l,i)=>{
+    if(!activeLayer.has(l.l)) return;
+    adj[l.s].push([l.t,i]); adj[l.t].push([l.s,i]);
+  });
+}
+function bfs(a,b){
+  if(a<0||b<0) return null;
+  const prev=new Array(nodes.length).fill(-1), pe=new Array(nodes.length).fill(-1);
+  const q=[a]; prev[a]=a;
+  while(q.length){
+    const u=q.shift();
+    if(u===b) break;
+    for(const [v,ei] of adj[u]){
+      if(prev[v]===-1 && visible(nodes[v])){ prev[v]=u; pe[v]=ei; q.push(v); }
+    }
+  }
+  if(prev[b]===-1) return null;
+  const seq=[], es=[];
+  let cur=b;
+  while(cur!==a){ seq.push(cur); es.push(pe[cur]); cur=prev[cur]; }
+  seq.push(a); seq.reverse(); es.reverse();
+  return {seq, es};
+}
 
 const zoom={s:1,x:0,y:0};
 function draw(){
   ctx.clearRect(0,0,W,H);
   ctx.save();
   ctx.translate(zoom.x+W/2,zoom.y+H/2); ctx.scale(zoom.s,zoom.s); ctx.translate(-W/2,-H/2);
-  links.forEach(l=>{
+
+  const focus=(hover>=0?hover:selected);
+  const nbr=new Set();
+  if(focus>=0 && mode==='browse'){
+    adj[focus].forEach(([v])=>nbr.add(v));
+  }
+  const dimAll = (focus>=0 && mode==='browse');
+
+  links.forEach((l,i)=>{
     if(!activeLayer.has(l.l)) return;
     const a=nodes[l.s], b=nodes[l.t];
-    if(!showIso && (a.d===0||b.d===0)) return;
-    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.95:0.50;
-    ctx.lineWidth=(l.l==='主仆关系')?1.1:1.35;
+    if(!visible(a)||!visible(b)) return;
+    const onPath=pathSet.has(i);
+    const near=(focus===l.s||focus===l.t);
+    if(dimAll && !onPath && !near){ ctx.globalAlpha=0.10; }
+    else if(onPath){ ctx.globalAlpha=1; }
+    else { ctx.globalAlpha=near?0.9:0.42; }
+    ctx.strokeStyle=onPath?'#c8a24a':LAYER[l.l];
+    ctx.lineWidth=onPath?2.8:((l.l==='主仆关系')?1.0:1.25);
     ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
   });
+
   if(showText){
     ctx.strokeStyle='#b3a58c';
     tlinks.forEach(l=>{
       if(l.w<4) return;
       const a=nodes[l.s], b=nodes[l.t];
-      ctx.globalAlpha=Math.min(0.06+l.w*0.008,0.36);
+      if(!visible(a)||!visible(b)) return;
+      ctx.globalAlpha=Math.min(0.05+l.w*0.007,0.30);
       ctx.lineWidth=0.6;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     });
   }
   ctx.globalAlpha=1;
+
   const order=nodes.map((n,i)=>i).sort((i,j)=>radius(nodes[i])-radius(nodes[j]));
   order.forEach(i=>{
-    const n=nodes[i], r=radius(n);
-    if(!showIso && n.d===0) return;
+    const n=nodes[i];
+    if(!visible(n)) return;
+    const r=radius(n);
     const hl=(i===hover||i===selected);
-    if(hl){ ctx.beginPath(); ctx.arc(n.x,n.y,r+8,0,7); ctx.fillStyle='rgba(164,52,42,.12)'; ctx.fill(); }
+    const onPath=pathSeq.includes(i);
+    const dim=dimAll && !(i===focus||nbr.has(i)) && !onPath;
+    if(hl||onPath){
+      ctx.beginPath(); ctx.arc(n.x,n.y,r+9,0,7);
+      ctx.fillStyle=onPath?'rgba(200,162,74,.28)':'rgba(164,52,42,.12)'; ctx.fill();
+    }
+    ctx.globalAlpha=dim?0.22:1;
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,7);
     ctx.fillStyle=COL[n.r]||'#888'; ctx.fill();
-    ctx.lineWidth=hl?2.4:1.0;
-    ctx.strokeStyle=hl?'#a4342a':'rgba(255,253,248,.95)';
+    ctx.lineWidth=(hl||onPath)?2.4:1.0;
+    ctx.strokeStyle=(hl||onPath)?'#c8a24a':'rgba(255,253,248,.95)';
     ctx.stroke();
   });
-  const top=nodes.map((n,i)=>i).filter(i=>showIso||nodes[i].d>0)
+  ctx.globalAlpha=1;
+
+  const top=nodes.map((n,i)=>i).filter(i=>visible(nodes[i]))
                   .sort((a,b)=>val(nodes[b])-val(nodes[a])).slice(0,labN);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   top.forEach(i=>{
@@ -422,7 +505,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// ---------------- 交互：缩放 / 平移 / 悬停 / 点选 / 拖动 ----------------
+// ---------------- 交互 ----------------
 let panning=false, last=null;
 function pos(e){
   const r=cv.getBoundingClientRect();
@@ -432,24 +515,49 @@ function pos(e){
 function pick(p){
   let best=-1,bd=1e9;
   nodes.forEach((n,i)=>{
-    if(!showIso && n.d===0) return;
+    if(!visible(n)) return;
     const d=(n.x-p.x)**2+(n.y-p.y)**2;
-    if(d<bd && d<(radius(n)+8)**2){ bd=d; best=i; }
+    if(d<bd && d<(radius(n)+9)**2){ bd=d; best=i; }
   });
   return best;
 }
 cv.addEventListener('mousedown',e=>{
   const p=pos(e), i=pick(p);
-  if(i>=0){ dragging=i; } else { panning=true; last={x:e.clientX,y:e.clientY}; cv.classList.add('drag'); }
+  if(i>=0){
+    if(mode==='remove'){
+      removed.has(nodes[i].id)?removed.delete(nodes[i].id):removed.add(nodes[i].id);
+      updateHint(); return;
+    }
+    if(mode==='path'){
+      if(pathA<0){ pathA=i; }
+      else if(pathB<0){ pathB=i; const r=bfs(pathA,pathB);
+        pathSeq=r?r.seq:[]; pathSet=new Set(r?r.es:[]);
+        updateHint(r?('路径长度 '+ (r.seq.length-1)):'两人不连通');
+      }
+      else { pathA=i; pathB=-1; pathSeq=[]; pathSet=new Set(); updateHint('已选起点，再选终点'); }
+      return;
+    }
+    dragging=i;
+  } else { panning=true; last={x:e.clientX,y:e.clientY}; cv.classList.add('drag'); }
 });
 cv.addEventListener('mousemove',e=>{
   const p=pos(e);
   if(dragging>=0){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; }
   else if(panning){ zoom.x+=e.clientX-last.x; zoom.y+=e.clientY-last.y; last={x:e.clientX,y:e.clientY}; }
-  else { hover=pick(p); cv.style.cursor=hover>=0?'pointer':'grab'; }
+  else {
+    hover=pick(p); cv.style.cursor=hover>=0?'pointer':'grab';
+    if(hover>=0 && mode!=='remove'){
+      const n=nodes[hover], r=cvWrap.getBoundingClientRect();
+      tip.style.display='block';
+      tip.style.left=(e.clientX-r.left+16)+'px';
+      tip.style.top=(e.clientY-r.top+14)+'px';
+      tip.innerHTML='<b>'+n.n+'</b><span>'+(n.r||'')+' · 度 '+n.d+' · 介数 '+n.b.toFixed(3)+'</span>';
+    } else tip.style.display='none';
+  }
 });
+cv.addEventListener('mouseleave',()=>{tip.style.display='none';});
 window.addEventListener('mouseup',e=>{
-  if(dragging>=0){ select(dragging); dragging=-1; }
+  if(dragging>=0){ if(mode==='browse') select(dragging); dragging=-1; }
   panning=false; cv.classList.remove('drag');
 });
 cv.addEventListener('wheel',e=>{
@@ -461,9 +569,16 @@ cv.addEventListener('wheel',e=>{
   zoom.s=Math.max(0.4,Math.min(5,zoom.s*f));
 },{passive:false});
 
+// 侧栏：人物卡 + 直接关系（可点击跳转）
 function select(i){
   selected=i;
   const n=nodes[i], d=document.getElementById('detail');
+  const rel=links.map((l,k)=>({l,k})).filter(o=>o.l.s===i||o.l.t===i);
+  const rows=rel.slice(0,26).map(o=>{
+    const other=o.l.s===i?o.l.t:o.l.s;
+    const dir=o.l.s===i?'→':'←';
+    return '<div class="relrow" data-i="'+other+'"><span>'+dir+' '+o.l.p+'</span>'+nodes[other].n+'</div>';
+  }).join('');
   document.getElementById('dbody').innerHTML=
     (n.img?'<img src="'+n.img+'" alt="'+n.n+'">':'')+
     '<h4>'+n.n+'</h4>'+
@@ -477,34 +592,101 @@ function select(i){
     '<tr><td>出场回数</td><td>'+n.ch+'</td></tr>'+
     (n.f?'<tr><td>结局</td><td>'+n.f+'</td></tr>':'')+
     '<tr><td>社群</td><td>'+(n.c>=0?('#'+n.c):'—')+'</td></tr>'+
-    '</table>';
+    '</table>'+
+    '<div class="relttl">直接关系（点击跳转）</div><div class="rellist">'+rows+'</div>';
   d.style.display='block';
+  d.querySelectorAll('.relrow').forEach(el=>el.onclick=()=>{
+    const j=+el.dataset.i; select(j); centerOn(j);
+  });
+}
+function centerOn(i){
+  zoom.s=1.9; zoom.x=-(nodes[i].x-W/2)*1.9; zoom.y=-(nodes[i].y-H/2)*1.9;
 }
 document.getElementById('closeD').onclick=()=>{document.getElementById('detail').style.display='none';selected=-1;};
+
 document.querySelectorAll('.rel').forEach(cb=>cb.onchange=()=>{
   if(cb.checked) activeLayer.add(cb.value); else activeLayer.delete(cb.value);
+  buildAdj(); if(pathA>=0&&pathB>=0){const r=bfs(pathA,pathB);pathSeq=r?r.seq:[];pathSet=new Set(r?r.es:[]);}
 });
 document.getElementById('showText').onchange=e=>{showText=e.target.checked;};
-document.getElementById('showIso').onchange=e=>{showIso=e.target.checked;};
+document.getElementById('showIso').onchange=e=>{showIso=e.target.checked; updateHint();};
 document.getElementById('metric').onchange=e=>{metric=e.target.value;};
 document.getElementById('lab').oninput=e=>{labN=+e.target.value;};
 document.getElementById('search').oninput=e=>{
   const q=e.target.value.trim();
   if(!q) return;
   const i=nodes.findIndex(n=>n.n.includes(q)||(n.al&&n.al.includes(q)));
-  if(i>=0){ select(i); zoom.s=1.8; zoom.x=-(nodes[i].x-W/2)*1.8; zoom.y=-(nodes[i].y-H/2)*1.8; }
+  if(i>=0 && visible(nodes[i])){ select(i); centerOn(i); }
 };
+
+// 模式切换
+document.querySelectorAll('.tools button').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.mode;
+  document.querySelectorAll('.tools button').forEach(x=>x.classList.toggle('on',x===b));
+  if(mode!=='path'){ pathA=pathB=-1; pathSeq=[]; pathSet=new Set(); }
+  updateHint();
+  cv.style.cursor = mode==='remove'?'crosshair':'grab';
+});
+function updateHint(){
+  if(mode==='browse') toolhint.textContent='点击人物查看卡片，悬停高亮邻居';
+  else if(mode==='path') toolhint.textContent = pathA<0?'点起点':'点终点（已选起点）';
+  else toolhint.textContent='点击人物可加入/移出，观察连通块变化（已移除 '+removed.size+' 人）';
+}
+
+// 时间轴
+const chapEl=document.getElementById('chap'), chapLab=document.getElementById('chaplab');
+function setChapter(v){
+  chap=v;
+  if(v===0){ castSet=null; chapLab.textContent='全部 120 回'; }
+  else {
+    const ids=(CAST[v]||[]).map(i=>nodes[i].id);
+    castSet=new Set(ids);
+    chapLab.textContent='第 '+v+' 回 · '+ids.length+' 人';
+  }
+  draw();
+}
+chapEl.oninput=e=>setChapter(+e.target.value);
+let timer=null;
+document.getElementById('play').onclick=function(){
+  if(timer){ clearInterval(timer); timer=null; this.textContent='▶ 播放'; return; }
+  this.textContent='❚❚ 暂停';
+  let v=chap;
+  timer=setInterval(()=>{
+    v = v>=120?1:v+1;
+    chapEl.value=v; setChapter(v);
+  },420);
+};
+document.getElementById('resetView').onclick=()=>{
+  zoom.s=1; zoom.x=0; zoom.y=0;
+  removed.clear(); commOff.clear(); pathA=pathB=-1; pathSeq=[]; pathSet=new Set();
+  chapEl.value=0; setChapter(0);
+  document.querySelectorAll('#commlegend .cl').forEach(x=>x.classList.remove('off'));
+  updateHint();
+};
+
+// 社群图例
+const legend=document.getElementById('commlegend');
+const comms=[...new Set(nodes.filter(n=>n.c>=0).map(n=>n.c))].sort((a,b)=>a-b);
+comms.forEach(c=>{
+  const el=document.createElement('span');
+  el.className='cl'; el.dataset.c=c;
+  el.innerHTML='<i style="background:'+COMMCOL[c%COMMCOL.length]+'"></i>'+c;
+  el.onclick=()=>{
+    if(commOff.has(c)){ commOff.delete(c); el.classList.remove('off'); }
+    else { commOff.add(c); el.classList.add('off'); }
+  };
+  legend.appendChild(el);
+});
 
 const secs=[...document.querySelectorAll('section')];
 window.addEventListener('scroll',()=>{
   const y=window.scrollY+130;
   let cur=secs[0].id;
-  secs.forEach(s=>{ if(s.offsetTop<=y) cur=s.id; });
+  secs.forEach(s2=>{ if(s2.offsetTop<=y) cur=s2.id; });
   document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur));
 });
 
-resize();
-loop();
+buildAdj(); resize(); updateHint(); loop();
 </script>
 </body>
 </html>
@@ -531,6 +713,7 @@ html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
 
 
 
