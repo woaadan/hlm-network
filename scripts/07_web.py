@@ -1,8 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
-import sys, io, json
+import sys, io, json, math
 from pathlib import Path
 import pandas as pd
+import networkx as nx
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent))
@@ -40,6 +41,28 @@ for _, r in rels.iterrows():
 sc = pd.read_csv(PROC / "cooccurrence_scene.csv", encoding="utf-8-sig")
 tl = [dict(s=idx[r["a"]], t=idx[r["b"]], w=int(r["同场次数"]))
       for _, r in sc[sc["同场次数"] >= 3].iterrows() if r["a"] in idx and r["b"] in idx]
+
+# 预计算布局（ForceAtlas2），网页只负责绘制，不再跑力模拟
+G = nx.Graph()
+G.add_nodes_from(live["人物ID"])
+for _, r in rels.iterrows():
+    a, b = r["主体ID"], r["客体ID"]
+    if a in idx and b in idx and a != b:
+        G.add_edge(a, b)
+giant = max(nx.connected_components(G), key=len)
+Hh = G.subgraph(giant)
+from lib_layout import forceatlas2
+POS = forceatlas2(Hh, weight=None, iterations=800, seed=7)
+iso_nodes = [n for n in live["人物ID"] if G.degree(n) == 0]
+# 孤岛排在外环（按度数 0 均分角度）
+for i, n in enumerate(iso_nodes):
+    ang = 2 * math.pi * i / max(len(iso_nodes), 1)
+    POS[n] = (math.cos(ang) * 1.16, math.sin(ang) * 1.16)
+mx = max(max(abs(x), abs(y)) for x, y in POS.values()) or 1.0
+for nd in nodes:
+    x, y = POS.get(nd["id"], (0.0, 0.0))
+    nd["nx"] = round(x / mx, 4)
+    nd["ny"] = round(y / mx, 4)
 
 DATA = dict(nodes=nodes, links=links, text=tl,
             stats=dict(n=len(nodes), rel=len(links), text=len(tl),
@@ -129,23 +152,22 @@ __CSS__
   <div id="net-wrap">
     <canvas id="cv"></canvas>
     <div class="panel">
-      <div style="color:#9a6a32;margin-bottom:6px">图层</div>
+      <div class="ttl">图层</div>
       <label><input type="checkbox" class="rel" value="亲属关系" checked><span class="dot" style="background:#b03a2e"></span>亲属关系</label>
       <label><input type="checkbox" class="rel" value="主仆关系" checked><span class="dot" style="background:#4f81bd"></span>主仆关系</label>
       <label><input type="checkbox" class="rel" value="社会关系" checked><span class="dot" style="background:#7fa86a"></span>社会关系</label>
       <label><input type="checkbox" id="showText"><span class="dot" style="background:#4a5260"></span>文本同场共现</label>
       <label><input type="checkbox" id="showIso"><span class="dot" style="background:#5d6572"></span>孤岛人物（65）</label>
-      <div style="color:#9a6a32;margin:12px 0 4px">节点大小</div>
+      <div class="ttl">节点大小</div>
       <div class="row">
         <select id="metric" style="width:100%;background:#fbf7ee;color:#2b2723;border:1px solid #e2d7c3;border-radius:7px;padding:6px;font-size:14px;font-family:inherit">
           <option value="d">关系度数</option><option value="b">介数中心性</option>
           <option value="t">文本共现度</option><option value="k">k-core</option>
         </select>
       </div>
-      <div style="color:#9a6a32;margin:12px 0 4px">标签密度</div>
+      <div class="ttl">标签密度</div>
       <input type="range" id="lab" min="0" max="40" value="14">
       <input id="search" placeholder="搜索人物…">
-      <button id="relayout" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:1px solid #e2d7c3;background:#f7f3ea;color:#6f6657;font-family:inherit;font-size:13.5px;cursor:pointer">重新布局</button>
       <div style="margin-top:10px"><span class="chip"><span class="dot" style="background:#b03a2e"></span>主子</span>
       <span class="chip"><span class="dot" style="background:#d68910"></span>妾室</span>
       <span class="chip"><span class="dot" style="background:#2e86c1"></span>仆役</span>
@@ -153,7 +175,7 @@ __CSS__
       <span class="chip"><span class="dot" style="background:#7f8c8d"></span>外人</span></div>
     </div>
     <div id="detail"><span class="close" id="closeD">×</span><div id="dbody"></div></div>
-    <div class="hint">拖拽移动 · 滚轮缩放 · 点击查看人物卡</div>
+    <div class="hint">固定布局（非力模拟）· 滚轮缩放 · 拖拽平移 · 点击查看人物卡</div>
   </div>
 </div></section>
 
@@ -196,6 +218,11 @@ __CSS__
   <figure><img src="figures/fig14_cutpoints.png" alt="割点">
   <figcaption>拿掉贾宝玉：巨连通块从 109 人掉到 96 人，另外裂出 9 块小碎片。
   这些碎片不是别的人物，正是只经由宝玉与外界相连的丫鬟、小厮与外客。</figcaption></figure>
+
+  <figure><img src="figures/fig18_structural_holes.png" alt="结构洞">
+  <figcaption>结构洞：横轴“有效规模”越大、纵轴“约束度”越低，越接近“桥”。
+  宝玉孤悬左下角（有效规模 26.5、约束度 0.063）；薛蟠、薛宝钗等人则聚在右上角——
+  他们的关系高度重叠，任何一条都通向同一小圈子。</figcaption></figure>
 </div></section>
 
 <section id="comm"><div class="wrap">
@@ -206,6 +233,20 @@ __CSS__
   <figure><img src="figures/fig4_community_mansion.png" alt="社群与府邸">
   <figcaption>左：社群 × 居所。注意“贾家荣国府”一列被切成 5 段——同一座府邸内部按“房”分裂；
   右：各社群的等级构成，仆役占比高的社群（怡红院、凤姐院）恰恰是关系最密的地方。</figcaption></figure>
+
+  <h3>九房之间并不老死不相往来</h3>
+  <p>97 条社群内部的边之外，还有 36 条跨社群边（37%）。它们并非平均分布：宝玉一人贡献 12 条，
+  贾政 8 条、王夫人 6 条、贾母 5 条。换句话说，<b>“房”与“房”之间的往来，是由少数几个家长承担的</b>，
+  其余人一辈子只在自己那一小块里活动。</p>
+  <figure><img src="figures/fig16_community_matrix.png" alt="社群邻接矩阵">
+  <figcaption>左：社群 × 社群的边数，对角线是各社群内部的“芯”；右：跨社群边最多的 14 人。</figcaption></figure>
+
+  <h3>家户：手下有几个人</h3>
+  <p>把主仆关系还原成二部图，班底大小一目了然：宝玉 11 人、王夫人 6 人、贾母 4 人、黛玉 3 人。
+  <b>荣国府的家务权力，先看“手下有几个人”</b>。而全府只有一对主子共用仆人——贾母与黛玉共用紫鹃，
+  正对应“紫鹃原是贾母的丫头，给了黛玉”。制度的刚性，在这里表现为一个几乎为零的数字。</p>
+  <figure><img src="figures/fig17_bipartite.png" alt="主仆二部图">
+  <figcaption>左列主子（按班底大小排序），右列其丫鬟、小厮、陪房；38 名仆役、16 位主子。</figcaption></figure>
   <blockquote>府邸只能解释 __NMI__（NMI），血缘解释 __NMIB__。真正切分网络的不是“住在哪”，
   而是“跟着谁吃饭”——宗法共同体的最小单位是“房”，不是“府”。</blockquote>
   <p>另一个值得注意的现象：把同样的算法用在<b>文本同场网络</b>上，模块度只有 __TMOD__。
@@ -238,6 +279,14 @@ __CSS__
   <figcaption>前 80 回与后 40 回的人物戏份高度连续：Spearman ρ=__RHO__，前 20 名重合 __OVER__ 人。
   这更像“同一舞台的延续”而非“另起炉灶”；但后 40 回确实有新面孔进入前列（__NEW__）。
   该指标只说明文本层面的连续性，<b>不足以单独判定作者归属</b>。</figcaption></figure>
+
+  <figure><img src="figures/fig20_temporal_centrality.png" alt="时序中心性">
+  <figcaption>把 120 回切成 12 块、每块重建同场网络：宝玉的“度”一路高企，但“介数”在第 8 块
+  （71–80 回）之后明显下滑——抄检大观园之后，他不再是各房之间的必经之路。</figcaption></figure>
+
+  <figure><img src="figures/fig19_fate.png" alt="命运与位置">
+  <figcaption>结局 × 介数：<b>死亡组的中位数反而最低</b>——死亡并不专属于主角，大量边缘人物是“无声退场”；
+  而<b>出家组</b>（宝玉、惜春、紫鹃、甄士隐）介数最高。戏份与退场早晚也没有明显关系。</figcaption></figure>
 </div></section>
 
 <section id="visual"><div class="wrap">
@@ -295,82 +344,37 @@ python scripts/07_web.py       # 生成本页</pre>
 const DATA = __DATA__;
 const nodes = DATA.nodes, links = DATA.links, tlinks = DATA.text;
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
-let W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
-let alpha=1, showText=false, showIso=false, metric='d', labN=18, selected=-1, hover=-1;
-const COL={ '主子':'#b03a2e','妾室':'#d68910','仆役':'#2e86c1','宗族':'#7d5ba6','客卿':'#16a085','外人':'#7f8c8d' };
-const LAYER={ '亲属关系':'#b03a2e','主仆关系':'#4f81bd','社会关系':'#7fa86a' };
+let W=0, H=0, DPR=Math.min(window.devicePixelRatio||1,2);
+let showText=false, showIso=false, metric='d', labN=14, selected=-1, hover=-1, dragging=-1;
+const COL={ '主子':'#a4342a','妾室':'#c9862b','仆役':'#3d6a8f','宗族':'#7a5a95','客卿':'#3f8f7a','外人':'#8a8071' };
+const LAYER={ '亲属关系':'#b0504a','主仆关系':'#4a7ba3','社会关系':'#7d9459' };
 const activeLayer=new Set(['亲属关系','主仆关系','社会关系']);
 
 function resize(){
   W=cv.clientWidth; H=cv.clientHeight;
   cv.width=W*DPR; cv.height=H*DPR;
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  applyLayout();
+}
+function applyLayout(){
+  const s=Math.min(W,H)*0.455;
+  nodes.forEach(n=>{ n.x=W/2+n.nx*s; n.y=H/2+n.ny*s; });
 }
 window.addEventListener('resize',resize);
-resize();
-
-// 初始位置：按社群分簇（延迟到画布尺寸可用时）
-let seeded=false;
-function seedPositions(){
-  const m=Math.min(W,H)*0.42;
-  nodes.forEach((n,i)=>{
-    const a=(n.c>=0?n.c:8)/9*Math.PI*2;
-    const r=0.45+0.42*((i*37)%100)/100;
-    n.x=W/2+Math.cos(a)*r*m+(Math.random()-.5)*18;
-    n.y=H/2+Math.sin(a)*r*m+(Math.random()-.5)*18;
-    n.vx=0;n.vy=0;
-  });
-  seeded=true;
-}
 
 const val=n=>metric==='d'?n.d:metric==='b'?n.b*60:metric==='t'?n.t:n.k*4;
-function radius(n){ return 3.2+Math.sqrt(Math.max(val(n),0))*1.55; }
+function radius(n){ return 3.6+Math.sqrt(Math.max(val(n),0))*1.7; }
 
-function step(){
-  const k=Math.sqrt(W*H/Math.max(nodes.length,1))*1.05;
-  const act=nodes.filter(n=>n.d>0);
-  const cell=k*5.5, cell2=cell*cell;
-  for(let i=0;i<act.length;i++){
-    const a=act[i];
-    for(let j=i+1;j<act.length;j++){
-      const b=act[j];
-      let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy+0.01;
-      if(d2>cell2) continue;
-      const d=Math.sqrt(d2);
-      const f=k*k/d*0.55;
-      dx/=d; dy/=d;
-      a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
-    }
-  }
-  const spring=(s,t,w)=>{
-    const a=nodes[s], b=nodes[t];
-    let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)+0.01;
-    const f=d*d/k*0.32*w;
-    dx/=d; dy/=d;
-    a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
-  };
-  links.forEach(l=>{ if(activeLayer.has(l.l)) spring(l.s,l.t,1.0); });
-  if(showText) tlinks.forEach(l=>{ if(l.w>=6) spring(l.s,l.t,0.10+Math.min(l.w,40)*0.006); });
-  const cx=W/2, cy=H/2;
-  act.forEach(n=>{
-    const g=0.0042; n.vx+=(cx-n.x)*g; n.vy+=(cy-n.y)*g;
-    n.vx*=0.80; n.vy*=0.80;
-    const m=Math.hypot(n.vx,n.vy), lim=k*0.55;
-    if(m>lim){ n.vx*=lim/m; n.vy*=lim/m; }
-    n.x+=n.vx*Math.max(alpha,0.25); n.y+=n.vy*Math.max(alpha,0.25);
-  });
-  alpha*=0.972; if(alpha<0.01) alpha=0;
-}
 const zoom={s:1,x:0,y:0};
 function draw(){
   ctx.clearRect(0,0,W,H);
   ctx.save();
   ctx.translate(zoom.x+W/2,zoom.y+H/2); ctx.scale(zoom.s,zoom.s); ctx.translate(-W/2,-H/2);
-  // 边
   links.forEach(l=>{
     if(!activeLayer.has(l.l)) return;
     const a=nodes[l.s], b=nodes[l.t];
-    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.95:0.52;
+    if(!showIso && (a.d===0||b.d===0)) return;
+    ctx.strokeStyle=LAYER[l.l]; ctx.globalAlpha=(hover===l.s||hover===l.t)?0.95:0.50;
     ctx.lineWidth=(l.l==='主仆关系')?1.1:1.35;
     ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
   });
@@ -379,97 +383,73 @@ function draw(){
     tlinks.forEach(l=>{
       if(l.w<4) return;
       const a=nodes[l.s], b=nodes[l.t];
-      ctx.globalAlpha=Math.min(0.06+l.w*0.008,0.38);
-      ctx.lineWidth=0.5;
+      ctx.globalAlpha=Math.min(0.06+l.w*0.008,0.36);
+      ctx.lineWidth=0.6;
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     });
   }
   ctx.globalAlpha=1;
-  // 节点
   const order=nodes.map((n,i)=>i).sort((i,j)=>radius(nodes[i])-radius(nodes[j]));
   order.forEach(i=>{
     const n=nodes[i], r=radius(n);
     if(!showIso && n.d===0) return;
     const hl=(i===hover||i===selected);
-    if(hl){
-      ctx.beginPath(); ctx.arc(n.x,n.y,r+7,0,7); ctx.fillStyle='rgba(164,52,42,.14)'; ctx.fill();
-    }
+    if(hl){ ctx.beginPath(); ctx.arc(n.x,n.y,r+8,0,7); ctx.fillStyle='rgba(164,52,42,.12)'; ctx.fill(); }
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,7);
-    ctx.fillStyle=COL[n.r]||'#888';
-    ctx.fill();
-    ctx.lineWidth=hl?2.2:0.8;
-    ctx.strokeStyle=hl?'#a4342a':'rgba(255,253,248,.92)';
+    ctx.fillStyle=COL[n.r]||'#888'; ctx.fill();
+    ctx.lineWidth=hl?2.4:1.0;
+    ctx.strokeStyle=hl?'#a4342a':'rgba(255,253,248,.95)';
     ctx.stroke();
   });
-  // 标签
-  const top=nodes.map((n,i)=>i).sort((a,b)=>val(nodes[b])-val(nodes[a])).slice(0,labN);
+  const top=nodes.map((n,i)=>i).filter(i=>showIso||nodes[i].d>0)
+                  .sort((a,b)=>val(nodes[b])-val(nodes[a])).slice(0,labN);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   top.forEach(i=>{
     const n=nodes[i], r=radius(n);
-    ctx.font=(r>10?'13px':'11.5px')+" 'Songti SC','SimSun',serif";
-    ctx.lineWidth=3.4; ctx.strokeStyle='rgba(247,243,234,.96)';
-    ctx.strokeText(n.n,n.x,n.y+r+9);
+    ctx.font=(r>11?'14px':'12.5px')+" 'Songti SC','SimSun',serif";
+    ctx.lineWidth=3.6; ctx.strokeStyle='rgba(247,243,234,.96)';
+    ctx.strokeText(n.n,n.x,n.y+r+10);
     ctx.fillStyle='#2b2723';
-    ctx.fillText(n.n,n.x,n.y+r+9);
+    ctx.fillText(n.n,n.x,n.y+r+10);
   });
   ctx.restore();
 }
-
-function placeIso(){
-  const act=nodes.filter(n=>n.d>0); if(!act.length) return;
-  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-  act.forEach(n=>{x0=Math.min(x0,n.x);x1=Math.max(x1,n.x);y0=Math.min(y0,n.y);y1=Math.max(y1,n.y);});
-  const cx=(x0+x1)/2, cy=(y0+y1)/2, R=Math.max(x1-x0,y1-y0)*0.60;
-  const iso=nodes.filter(n=>n.d===0);
-  iso.forEach((n,i)=>{const a=2*Math.PI*i/Math.max(iso.length,1);
-    n.x=cx+Math.cos(a)*R; n.y=cy+Math.sin(a)*R; n.vx=n.vy=0;});
-}
-function recenter(){
-  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-  const pool=showIso?nodes:nodes.filter(n=>n.d>0);
-  pool.forEach(n=>{x0=Math.min(x0,n.x);x1=Math.max(x1,n.x);y0=Math.min(y0,n.y);y1=Math.max(y1,n.y);});
-  const cx=(x0+x1)/2, cy=(y0+y1)/2;
-  const dx=(W/2-cx)*0.08, dy=(H/2-cy)*0.08;
-  if(Math.abs(dx)>0.1||Math.abs(dy)>0.1) nodes.forEach(n=>{n.x+=dx;n.y+=dy;});
-  const span=Math.max(x1-x0,y1-y0);
-  if(span>0){ const target=Math.min(W,H)*0.92; const k=target/span;
-    if(Math.abs(k-1)>0.02) nodes.forEach(n=>{n.x=W/2+(n.x-W/2)*Math.min(Math.max(k,0.5),2);n.y=H/2+(n.y-H/2)*Math.min(Math.max(k,0.5),2);});
+function loop(){
+  if(cv.clientWidth>10 && cv.clientHeight>10){
+    if(W!==cv.clientWidth || H!==cv.clientHeight) resize();
+    draw();
   }
+  requestAnimationFrame(loop);
 }
-function loop(){ if(cv.clientWidth>10&&cv.clientHeight>10){ if(!seeded||Math.abs(cv.clientHeight-H)>2) { resize(); if(!seeded) seedPositions(); } if(alpha>0){ step(); if(showIso) placeIso(); if(alpha>0.3) recenter(); } draw(); } requestAnimationFrame(loop); }
 
-// 交互
-let dragging=null, panning=false, last=null;
+// ---------------- 交互：缩放 / 平移 / 悬停 / 点选 / 拖动 ----------------
+let panning=false, last=null;
 function pos(e){
   const r=cv.getBoundingClientRect();
-  const x=(e.clientX-r.left-zoom.x-W/2)/zoom.s+W/2;
-  const y=(e.clientY-r.top-zoom.y-H/2)/zoom.s+H/2;
-  return {x,y};
+  return { x:(e.clientX-r.left-zoom.x-W/2)/zoom.s+W/2,
+           y:(e.clientY-r.top-zoom.y-H/2)/zoom.s+H/2 };
 }
 function pick(p){
   let best=-1,bd=1e9;
   nodes.forEach((n,i)=>{
+    if(!showIso && n.d===0) return;
     const d=(n.x-p.x)**2+(n.y-p.y)**2;
-    if(d<bd && d<(radius(n)+8)**2){bd=d;best=i;}
+    if(d<bd && d<(radius(n)+8)**2){ bd=d; best=i; }
   });
   return best;
 }
 cv.addEventListener('mousedown',e=>{
-  const p=pos(e); const i=pick(p);
-  if(i>=0){dragging=i;} else {panning=true; last={x:e.clientX,y:e.clientY}; cv.classList.add('drag');}
+  const p=pos(e), i=pick(p);
+  if(i>=0){ dragging=i; } else { panning=true; last={x:e.clientX,y:e.clientY}; cv.classList.add('drag'); }
 });
 cv.addEventListener('mousemove',e=>{
   const p=pos(e);
-  if(dragging!==null){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; n.vx=n.vy=0; alpha=0.55; }
+  if(dragging>=0){ const n=nodes[dragging]; n.x=p.x; n.y=p.y; }
   else if(panning){ zoom.x+=e.clientX-last.x; zoom.y+=e.clientY-last.y; last={x:e.clientX,y:e.clientY}; }
   else { hover=pick(p); cv.style.cursor=hover>=0?'pointer':'grab'; }
 });
 window.addEventListener('mouseup',e=>{
-  if(dragging!==null){
-    const p=pos(e);
-    if((nodes[dragging].vx===0)&&(nodes[dragging].vy===0)) select(dragging);
-    dragging=null;
-  }
+  if(dragging>=0){ select(dragging); dragging=-1; }
   panning=false; cv.classList.remove('drag');
 });
 cv.addEventListener('wheel',e=>{
@@ -478,13 +458,12 @@ cv.addEventListener('wheel',e=>{
   const r=cv.getBoundingClientRect();
   const mx=e.clientX-r.left-W/2, my=e.clientY-r.top-H/2;
   zoom.x=mx-(mx-zoom.x)*f; zoom.y=my-(my-zoom.y)*f;
-  zoom.s=Math.max(0.35,Math.min(4,zoom.s*f));
+  zoom.s=Math.max(0.4,Math.min(5,zoom.s*f));
 },{passive:false});
 
 function select(i){
   selected=i;
   const n=nodes[i], d=document.getElementById('detail');
-  const rel=links.filter(l=>l.s===i||l.t===i).length;
   document.getElementById('dbody').innerHTML=
     (n.img?'<img src="'+n.img+'" alt="'+n.n+'">':'')+
     '<h4>'+n.n+'</h4>'+
@@ -500,36 +479,31 @@ function select(i){
     '<tr><td>社群</td><td>'+(n.c>=0?('#'+n.c):'—')+'</td></tr>'+
     '</table>';
   d.style.display='block';
-  alpha=Math.max(alpha,.3);
 }
 document.getElementById('closeD').onclick=()=>{document.getElementById('detail').style.display='none';selected=-1;};
-
 document.querySelectorAll('.rel').forEach(cb=>cb.onchange=()=>{
   if(cb.checked) activeLayer.add(cb.value); else activeLayer.delete(cb.value);
-  alpha=1;
 });
-document.getElementById('showText').onchange=e=>{showText=e.target.checked; alpha=0.8;};
-document.getElementById('showIso').onchange=e=>{showIso=e.target.checked; placeIso(); alpha=0.8;};
-document.getElementById('metric').onchange=e=>{metric=e.target.value; draw();};
-document.getElementById('lab').oninput=e=>{labN=+e.target.value; draw();};
+document.getElementById('showText').onchange=e=>{showText=e.target.checked;};
+document.getElementById('showIso').onchange=e=>{showIso=e.target.checked;};
+document.getElementById('metric').onchange=e=>{metric=e.target.value;};
+document.getElementById('lab').oninput=e=>{labN=+e.target.value;};
 document.getElementById('search').oninput=e=>{
   const q=e.target.value.trim();
   if(!q) return;
   const i=nodes.findIndex(n=>n.n.includes(q)||(n.al&&n.al.includes(q)));
-  if(i>=0){ select(i); zoom.s=1.6; zoom.x=-(nodes[i].x-W/2)*1.6; zoom.y=-(nodes[i].y-H/2)*1.6; }
+  if(i>=0){ select(i); zoom.s=1.8; zoom.x=-(nodes[i].x-W/2)*1.8; zoom.y=-(nodes[i].y-H/2)*1.8; }
 };
 
-document.getElementById('relayout').onclick=()=>{ seedPositions(); alpha=1; };
-
-// 导航高亮
 const secs=[...document.querySelectorAll('section')];
 window.addEventListener('scroll',()=>{
-  const y=window.scrollY+120;
+  const y=window.scrollY+130;
   let cur=secs[0].id;
   secs.forEach(s=>{ if(s.offsetTop<=y) cur=s.id; });
   document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur));
 });
 
+resize();
 loop();
 </script>
 </body>
@@ -557,6 +531,7 @@ html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
 
 
 
