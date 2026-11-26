@@ -6,3 +6,7 @@ _check.js
 _t1.json
 _ctext.html
 
+
+# 报告（本地生成，未公开）
+report/
+figures_pdf/

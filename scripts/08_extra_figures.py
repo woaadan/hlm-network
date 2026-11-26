@@ -12,7 +12,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent))
-from lib_common import PROC, FIG, DOCS, setup_font, PAPER, INK, LAYER_COLOR, ROLE_COLOR
+from lib_common import PROC, FIG, DOCS, setup_font, PAPER, INK, LAYER_COLOR, ROLE_COLOR, save_fig
 from lib_layout import forceatlas2
 
 setup_font()
@@ -39,9 +39,7 @@ for _, r in sc[sc["同场次数"] >= 3].iterrows():
     GT.add_edge(r["a"], r["b"], weight=int(r["同场次数"]))
 
 def save(fig, fn):
-    for d in (FIG, DOCS / "figures"):
-        fig.patch.set_facecolor(PAPER)
-        fig.savefig(d / fn, facecolor=PAPER)
+    save_fig(fig, fn)
     plt.close(fig)
     print("saved", fn)
 
@@ -177,4 +175,5 @@ for f in (layers, degree_dist, cutpoints, heatmap):
         f()
     except Exception as e:
         import traceback; traceback.print_exc()
+
 

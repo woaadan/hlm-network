@@ -13,7 +13,7 @@ from PIL import Image
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent))
-from lib_common import PROC, FIG, DOCS, RAW, setup_font, LAYER_COLOR, ROLE_COLOR, PAPER
+from lib_common import PROC, FIG, DOCS, RAW, setup_font, LAYER_COLOR, ROLE_COLOR, PAPER, save_fig
 from lib_layout import forceatlas2
 
 setup_font()
@@ -45,9 +45,7 @@ CMAP = ["#B03A2E", "#2E86C1", "#229954", "#D68910", "#7D3C98",
         "#17A589", "#CA6F1E", "#5D6D7E", "#C2185B"]
 
 def save(fig, fn):
-    for d in (FIG, DOCS / "figures"):
-        fig.patch.set_facecolor(PAPER)
-        fig.savefig(d / fn, facecolor=PAPER)
+    save_fig(fig, fn)
     plt.close(fig)
     print("saved", fn)
 
@@ -436,5 +434,6 @@ for fn in (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11):
         import traceback
         print("!! %s 失败：" % fn.__name__, e)
         traceback.print_exc()
+
 
 

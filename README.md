@@ -114,6 +114,7 @@ python scripts/03_text.py       # 全文 → 提及 / 共现
 python scripts/04_images.py     # 图像去重 + 特征
 python scripts/05_network.py    # 网络分析
 python scripts/06_figures.py    # 静态图
+python scripts/10_optimize.py   # 图片压成 WebP（首屏 20MB -> 2.6MB）
 python scripts/07_web.py        # 网页
 ```
 
@@ -179,5 +180,6 @@ python scripts/07_web.py        # 网页
 - **时间轴**：拖动 1–120 回，只显示该回出场的人；支持自动播放，看图如何随回目重组。
 - **社群筛选**：点面板里的社群编号开关某一房；配合"节点大小"可切换度 / 介数 / 文本度 / k-core。
 - **悬停聚焦**：鼠标停在某人身上，只高亮他的邻居，其余变淡，并弹出跟随式提示。
+
 
 

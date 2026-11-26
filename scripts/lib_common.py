@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """统一路径、字体与工具。"""
+import os
 from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
@@ -18,8 +19,20 @@ for d in (CUR, PROC, FIG, DOCS, DOCS / "figures", DOCS / "img"):
     d.mkdir(parents=True, exist_ok=True)
 
 CJK = "Microsoft YaHei"
-PAPER = "#f7f3ea"      # 宣纸底色：网页与图共用，避免白底突兀
+# 宣纸底色：网页与静态图共用。出 PDF 用图时置 HLM_PAPER=#ffffff、HLM_FIGOUT=figures_pdf
+PAPER = os.environ.get("HLM_PAPER", "#f7f3ea")
 INK = "#2b2723"
+FIGOUT = (ROOT / os.environ["HLM_FIGOUT"]) if os.environ.get("HLM_FIGOUT") else None
+
+
+def save_fig(fig, fn):
+    """统一出图：网页版同时写 figures/ 与 docs/figures/；PDF 版只写 HLM_FIGOUT。"""
+    fig.patch.set_facecolor(PAPER)
+    for d in ([FIGOUT] if FIGOUT else [FIG, DOCS / "figures"]):
+        d.mkdir(parents=True, exist_ok=True)
+        fig.savefig(d / fn, facecolor=PAPER)
+
+
 def setup_font():
     for name in ["Microsoft YaHei", "SimHei", "SimSun", "Noto Sans CJK SC"]:
         if any(f.name == name for f in font_manager.fontManager.ttflist):

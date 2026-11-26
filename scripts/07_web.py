@@ -29,7 +29,7 @@ for _, r in live.iterrows():
         f="" if pd.isna(nm.set_index("人物ID").loc[r["人物ID"], "结局"]) else
         str(nm.set_index("人物ID").loc[r["人物ID"], "结局"]),
         ch=int(nm.set_index("人物ID").loc[r["人物ID"], "出场回数"] or 0),
-        img=("img/%s.jpg" % r["人物ID"]) if (DOCS / "img" / (r["人物ID"] + ".jpg")).exists() else "",
+        img=("img/%s.webp" % r["人物ID"]) if (DOCS / "img" / (r["人物ID"] + ".webp")).exists() else "",
     ))
 
 links = []
@@ -142,7 +142,7 @@ __CSS__
     <tr><td>琪官、尤老娘 各立一行</td><td>分别是蒋玉菡的艺名、尤氏继母</td><td>合并实体，保留别名</td></tr>
   </table>
 
-  <figure><img src="figures/fig9_evidence.png" alt="关系边的文本证据">
+  <figure><img loading="lazy" decoding="async" src="figures/fig9_evidence.webp" alt="关系边的文本证据">
   <figcaption>把关系边放回 120 回全文里检验：<b>__ZERO__ 条边在全书里从未同回出现</b>，中位数 __MED__ 回。
   低频者多为“间接关系”或误标（如把主仆写成亲属），这为后续人工复核提供了排序依据。</figcaption></figure>
 </div></section>
@@ -200,11 +200,11 @@ __CSS__
   <h2><span class="num">03 / STRUCTURE</span>谁不可替代</h2>
   <p class="lead">关系网络极稀疏（密度 __DENS__），109 人的巨连通块却只有 9 跳直径——一个“小世界”。
   度、介数、PageRank 三种口径给出的答案并不相同，这正是多层网络有意思的地方。</p>
-  <figure><img src="figures/fig1_relation_network.png" alt="关系网络">
+  <figure><img loading="lazy" decoding="async" src="figures/fig1_relation_network.webp" alt="关系网络">
   <figcaption>巨连通块 109 人、159 条关系，按 Louvain 社群着色。可以看到荣国府一侧几乎被王夫人、贾母、
   贾政、宝玉切成若干“院”，宁国府（绿）与薛家（橙）各自成团。</figcaption></figure>
 
-  <figure><img src="figures/fig12_layers.png" alt="三层分解">
+  <figure><img loading="lazy" decoding="async" src="figures/fig12_layers.webp" alt="三层分解">
   <figcaption>把同一张图按关系大类拆成三层：<b>亲属层 76 人 / 104 边</b>是骨架，
   <b>主仆层 53 人 / 39 边</b>是若干放射状“星”（每个主子挂一串丫鬟小厮），
   <b>社会层只有 19 人 / 16 边</b>——所谓“朋友”在这部小说里是稀缺资源。</figcaption></figure>
@@ -216,27 +216,27 @@ __CSS__
     <div class="card smallp"><b>贾惜春</b><p>度只有 4，介数却排第四（0.048）。她与宁国府的血缘、与荣国府的居住、与佛门的归宿，
     三重身份让她成为三块之间的“窄门”。</p></div>
   </div>
-  <figure><img src="figures/fig3_centrality.png" alt="中心性">
+  <figure><img loading="lazy" decoding="async" src="figures/fig3_centrality.webp" alt="中心性">
   <figcaption>三把尺子量同一个人：宝玉在三种口径下都第一；王熙凤 PageRank 低于贾母但介数接近，
   说明她“影响大而路径短”；贾政度很高但介数偏低——他是“门面”而非“通道”。</figcaption></figure>
 
-  <figure><img src="figures/fig15_centrality_heatmap.png" alt="中心性热图">
+  <figure><img loading="lazy" decoding="async" src="figures/fig15_centrality_heatmap.webp" alt="中心性热图">
   <figcaption>24 位主要人物的六种中心性并排（列内归一化）。贾宝玉整行几乎全亮；
   王夫人「介数高、度中」；贾惜春「度低、介数高」——三处不一致本身就是结论：
   不同中心性测的是“位置”的不同侧面。</figcaption></figure>
-  <figure><img src="figures/fig5_core_periphery.png" alt="核心边缘">
+  <figure><img loading="lazy" decoding="async" src="figures/fig5_core_periphery.webp" alt="核心边缘">
   <figcaption>k-core 只有 3 层，说明这部小说的人物网络“薄而宽”：核心并非层层嵌套，而是一个扁平的核心圈
   加大量依附其上的卫星人物。</figcaption></figure>
 
-  <figure><img src="figures/fig13_degree_dist.png" alt="度分布">
+  <figure><img loading="lazy" decoding="async" src="figures/fig13_degree_dist.webp" alt="度分布">
   <figcaption>两种网络的不同“形状”：关系层是重尾（多数人 1–2 个关系，极少数人二三十个），
   文本同场层则接近均匀——因为“同场”是场景决定的，人人都有机会出场。</figcaption></figure>
 
-  <figure><img src="figures/fig14_cutpoints.png" alt="割点">
+  <figure><img loading="lazy" decoding="async" src="figures/fig14_cutpoints.webp" alt="割点">
   <figcaption>拿掉贾宝玉：巨连通块从 109 人掉到 96 人，另外裂出 9 块小碎片。
   这些碎片不是别的人物，正是只经由宝玉与外界相连的丫鬟、小厮与外客。</figcaption></figure>
 
-  <figure><img src="figures/fig18_structural_holes.png" alt="结构洞">
+  <figure><img loading="lazy" decoding="async" src="figures/fig18_structural_holes.webp" alt="结构洞">
   <figcaption>结构洞：横轴“有效规模”越大、纵轴“约束度”越低，越接近“桥”。
   宝玉孤悬左下角（有效规模 26.5、约束度 0.063）；薛蟠、薛宝钗等人则聚在右上角——
   他们的关系高度重叠，任何一条都通向同一小圈子。</figcaption></figure>
@@ -247,7 +247,7 @@ __CSS__
   <p class="lead">在关系网络上做 Louvain，得到 9 个社群、模块度 __MOD__。它们几乎逐个对应“房头”：
   宁国府、薛家、凤姐—琏二房、王夫人—元春、贾政—赵姨娘、秦可卿—秦家、邢夫人—邢家，
   以及被单独切出来的“怡红院系”。</p>
-  <figure><img src="figures/fig4_community_mansion.png" alt="社群与府邸">
+  <figure><img loading="lazy" decoding="async" src="figures/fig4_community_mansion.webp" alt="社群与府邸">
   <figcaption>左：社群 × 居所。注意“贾家荣国府”一列被切成 5 段——同一座府邸内部按“房”分裂；
   右：各社群的等级构成，仆役占比高的社群（怡红院、凤姐院）恰恰是关系最密的地方。</figcaption></figure>
 
@@ -255,14 +255,14 @@ __CSS__
   <p>97 条社群内部的边之外，还有 36 条跨社群边（37%）。它们并非平均分布：宝玉一人贡献 12 条，
   贾政 8 条、王夫人 6 条、贾母 5 条。换句话说，<b>“房”与“房”之间的往来，是由少数几个家长承担的</b>，
   其余人一辈子只在自己那一小块里活动。</p>
-  <figure><img src="figures/fig16_community_matrix.png" alt="社群邻接矩阵">
+  <figure><img loading="lazy" decoding="async" src="figures/fig16_community_matrix.webp" alt="社群邻接矩阵">
   <figcaption>左：社群 × 社群的边数，对角线是各社群内部的“芯”；右：跨社群边最多的 14 人。</figcaption></figure>
 
   <h3>家户：手下有几个人</h3>
   <p>把主仆关系还原成二部图，班底大小一目了然：宝玉 11 人、王夫人 6 人、贾母 4 人、黛玉 3 人。
   <b>荣国府的家务权力，先看“手下有几个人”</b>。而全府只有一对主子共用仆人——贾母与黛玉共用紫鹃，
   正对应“紫鹃原是贾母的丫头，给了黛玉”。制度的刚性，在这里表现为一个几乎为零的数字。</p>
-  <figure><img src="figures/fig17_bipartite.png" alt="主仆二部图">
+  <figure><img loading="lazy" decoding="async" src="figures/fig17_bipartite.webp" alt="主仆二部图">
   <figcaption>左列主子（按班底大小排序），右列其丫鬟、小厮、陪房；38 名仆役、16 位主子。</figcaption></figure>
   <blockquote>府邸只能解释 __NMI__（NMI），血缘解释 __NMIB__。真正切分网络的不是“住在哪”，
   而是“跟着谁吃饭”——宗法共同体的最小单位是“房”，不是“府”。</blockquote>
@@ -277,7 +277,7 @@ __CSS__
   <p class="lead">原表 179 人里有 65 人没有任何关系边——包括平儿、紫鹃、司棋、待书、抱琴这些大丫鬟。
   这不是她们不重要，而是编表时“只记主仆、不记丫鬟网络”。用 120 回全文的 400 字同场窗口重建后，
   59 人可以接回主网。</p>
-  <figure><img src="figures/fig2_fused_network.png" alt="融合网络">
+  <figure><img loading="lazy" decoding="async" src="figures/fig2_fused_network.webp" alt="融合网络">
   <figcaption>内圈＝原表已录入的 114 人；外环＝原表“关系网外”、但文本仍在场的 59 人，灰虚线指向其最强的同场伙伴。
   外环里能认出宝玉的小厮（茗烟、锄药、扫红）、贾母的丫鬟（琥珀、翡翠、玻璃）、十二官与清客。</figcaption></figure>
   <p>文本层还给出一个反直觉的结果：<b>丫鬟网络不是“星形”而是“链形”</b>。以袭人为例，她与宝玉的同场次数极高，
@@ -289,19 +289,19 @@ __CSS__
   <h2><span class="num">06 / TIME</span>舞台从谁身上移开</h2>
   <p class="lead">把 120 回切成 12 个十年块，重建每块的同场共现网络，能看到人物戏份的此消彼长：
   袭人、晴雯在第 8 块（71–80 回）后急剧退场，紫鹃、王夫人在 81–100 回抬头，薛宝钗在最后两块回到中心。</p>
-  <figure><img src="figures/fig6_temporal.png" alt="时序">
+  <figure><img loading="lazy" decoding="async" src="figures/fig6_temporal.webp" alt="时序">
   <figcaption>上排：每回出场人数与内部共现密度，虚线为第 80 回。下：主要人物出场强度热图。
   “抄检大观园”（74 回）之后，网络从“园中群像”退回到“府内家长”。</figcaption></figure>
-  <figure><img src="figures/fig7_authorship.png" alt="前后80回">
+  <figure><img loading="lazy" decoding="async" src="figures/fig7_authorship.webp" alt="前后80回">
   <figcaption>前 80 回与后 40 回的人物戏份高度连续：Spearman ρ=__RHO__，前 20 名重合 __OVER__ 人。
   这更像“同一舞台的延续”而非“另起炉灶”；但后 40 回确实有新面孔进入前列（__NEW__）。
   该指标只说明文本层面的连续性，<b>不足以单独判定作者归属</b>。</figcaption></figure>
 
-  <figure><img src="figures/fig20_temporal_centrality.png" alt="时序中心性">
+  <figure><img loading="lazy" decoding="async" src="figures/fig20_temporal_centrality.webp" alt="时序中心性">
   <figcaption>把 120 回切成 12 块、每块重建同场网络：宝玉的“度”一路高企，但“介数”在第 8 块
   （71–80 回）之后明显下滑——抄检大观园之后，他不再是各房之间的必经之路。</figcaption></figure>
 
-  <figure><img src="figures/fig19_fate.png" alt="命运与位置">
+  <figure><img loading="lazy" decoding="async" src="figures/fig19_fate.webp" alt="命运与位置">
   <figcaption>结局 × 介数：<b>死亡组的中位数反而最低</b>——死亡并不专属于主角，大量边缘人物是“无声退场”；
   而<b>出家组</b>（宝玉、惜春、紫鹃、甄士隐）介数最高。戏份与退场早晚也没有明显关系。</figcaption></figure>
 </div></section>
@@ -310,11 +310,11 @@ __CSS__
   <h2><span class="num">07 / IMAGE MODALITY</span>脸能不能解释位置</h2>
   <p class="lead">127 张可确认的人物剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
   结论有点扫兴但很诚实：<b>视觉特征与网络位置几乎不相关</b>（度—饱和度 r=__CS__，度—亮度 r=__CB__）。</p>
-  <figure><img src="figures/fig8_visual_modality.png" alt="图像模态">
+  <figure><img loading="lazy" decoding="async" src="figures/fig8_visual_modality.webp" alt="图像模态">
   <figcaption>主子与仆役剧照的亮度、饱和度差异均不显著（Mann-Whitney p=__PB__ / __PS__）；
   唯一显著的是边缘密度（p=__PE__），可能来自构图景别而非身份。右图揭示真正的偏差：
   <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子；另有 20 张根本不是人像（书封、鸳鸯、鹦鹉、琥珀、雕像、文字占位、拼图等），已剔除。</figcaption></figure>
-  <figure><img src="figures/fig10_persona_cards.png" alt="人物卡">
+  <figure><img loading="lazy" decoding="async" src="figures/fig10_persona_cards.webp" alt="人物卡">
   <figcaption>多模态人物卡：剧照（图像）＋ 度/介数（网络）＋ 出场回数（文本）。</figcaption></figure>
   <p class="small">说明：原始图源分为 87 版剧照、工笔/绣像与带水印的网络图片三类，年代与风格不统一，
   因此本页只做<b>低层视觉统计</b>，不据此推断人物形象。</p>
@@ -761,6 +761,7 @@ html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
 
 
 

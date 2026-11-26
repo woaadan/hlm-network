@@ -13,7 +13,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent))
-from lib_common import PROC, FIG, DOCS, setup_font, PAPER, INK, LAYER_COLOR, ROLE_COLOR
+from lib_common import PROC, FIG, DOCS, setup_font, PAPER, INK, LAYER_COLOR, ROLE_COLOR, save_fig
 from lib_layout import forceatlas2
 
 setup_font()
@@ -36,9 +36,7 @@ for _, r in rels.iterrows():
         G.add_edge(r["主体ID"], r["客体ID"], layer=r["关系大类"])
 
 def save(fig, fn):
-    for d in (FIG, DOCS / "figures"):
-        fig.patch.set_facecolor(PAPER)
-        fig.savefig(d / fn, facecolor=PAPER)
+    save_fig(fig, fn)
     plt.close(fig)
     print("saved", fn)
 
@@ -267,5 +265,6 @@ for f in (community_matrix, bipartite_household, holes, fate, temporal_centralit
 
 json.dump(out, open(PROC / "extra_summary.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print(json.dumps(out, ensure_ascii=False)[:800])
+
 
 
