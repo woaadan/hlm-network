@@ -189,7 +189,9 @@ __CSS__
     <div class="timebar">
       <input type="range" id="chap" min="0" max="120" value="0">
       <div class="row"><span id="chaplab">全部 120 回</span>
-        <span><button id="play">▶ 播放</button> <button id="resetView">复位</button></span></div>
+        <span><button id="play">▶ 播放</button>
+        <select id="speed"><option value="700">0.6×</option><option value="420" selected>1×</option><option value="200">2×</option></select>
+        <button id="resetView">复位</button></span></div>
     </div>
     <div class="tip" id="tip"></div>
   </div>
@@ -307,12 +309,12 @@ __CSS__
 
 <section id="visual"><div class="wrap">
   <h2><span class="num">07 / IMAGE MODALITY</span>脸能不能解释位置</h2>
-  <p class="lead">141 张可确认的人物剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
+  <p class="lead">128 张可确认的人物剧照提取了亮度、饱和度、色彩丰富度、边缘密度与主色相，再与身份、网络指标对照。
   结论有点扫兴但很诚实：<b>视觉特征与网络位置几乎不相关</b>（度—饱和度 r=__CS__，度—亮度 r=__CB__）。</p>
   <figure><img src="figures/fig8_visual_modality.png" alt="图像模态">
   <figcaption>主子与仆役剧照的亮度、饱和度差异均不显著（Mann-Whitney p=__PB__ / __PS__）；
   唯一显著的是边缘密度（p=__PE__），可能来自构图景别而非身份。右图揭示真正的偏差：
-  <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子；另有 7 张根本不是人像（书封、云盘图标、玉石、雕像、文字占位），已剔除。</figcaption></figure>
+  <b>“有图”本身就是一种资源</b>——仆役的图源冲突率远高于主子；另有 20 张根本不是人像（书封、鸳鸯、鹦鹉、琥珀、雕像、文字占位、拼图等），已剔除。</figcaption></figure>
   <figure><img src="figures/fig10_persona_cards.png" alt="人物卡">
   <figcaption>多模态人物卡：剧照（图像）＋ 度/介数（网络）＋ 出场回数（文本）。</figcaption></figure>
   <p class="small">说明：原始图源分为 87 版剧照、工笔/绣像与带水印的网络图片三类，年代与风格不统一，
@@ -529,12 +531,13 @@ cv.addEventListener('mousedown',e=>{
       updateHint(); return;
     }
     if(mode==='path'){
-      if(pathA<0){ pathA=i; }
+      if(pathA<0){ pathA=i; updateHint(); }
       else if(pathB<0){ pathB=i; const r=bfs(pathA,pathB);
         pathSeq=r?r.seq:[]; pathSet=new Set(r?r.es:[]);
-        updateHint(r?('路径长度 '+ (r.seq.length-1)):'两人不连通');
+        showPath(r);
+        updateHint();
       }
-      else { pathA=i; pathB=-1; pathSeq=[]; pathSet=new Set(); updateHint('已选起点，再选终点'); }
+      else { pathA=i; pathB=-1; pathSeq=[]; pathSet=new Set(); updateHint(); }
       return;
     }
     dragging=i;
@@ -627,10 +630,50 @@ document.querySelectorAll('.tools button').forEach(b=>b.onclick=()=>{
   updateHint();
   cv.style.cursor = mode==='remove'?'crosshair':'grab';
 });
+function components(){
+  const vis=nodes.filter(visible), at=new Map();
+  vis.forEach((n,i)=>at.set(n.id,i));
+  const par=vis.map((_,i)=>i);
+  const find=x=>{ while(par[x]!==x){ par[x]=par[par[x]]; x=par[x]; } return x; };
+  links.forEach(l=>{
+    if(!activeLayer.has(l.l)) return;
+    const a=at.get(nodes[l.s].id), b=at.get(nodes[l.t].id);
+    if(a===undefined||b===undefined) return;
+    const ra=find(a), rb=find(b); if(ra!==rb) par[ra]=rb;
+  });
+  const roots=new Set(); vis.forEach((_,i)=>roots.add(find(i)));
+  return {n:vis.length, c:roots.size};
+}
 function updateHint(){
   if(mode==='browse') toolhint.textContent='点击人物查看卡片，悬停高亮邻居';
   else if(mode==='path') toolhint.textContent = pathA<0?'点起点':'点终点（已选起点）';
-  else toolhint.textContent='点击人物可加入/移出，观察连通块变化（已移除 '+removed.size+' 人）';
+  else {
+    const k=components();
+    toolhint.textContent='已移除 '+removed.size+' 人 · 剩 '+k.n+' 人 · '+k.c+' 个连通块';
+  }
+}
+function showPath(r){
+  const d=document.getElementById('detail');
+  if(!r){
+    document.getElementById('dbody').innerHTML='<h4>两人不连通</h4><div class="meta">当前图层下没有通路，试试勾选更多关系层</div>';
+    d.style.display='block'; return;
+  }
+  let html='<h4>关系链</h4><div class="meta">'+(r.seq.length-1)+' 步 · 点击名字可跳转</div><div class="pathlist">';
+  r.seq.forEach((ni,k)=>{
+    const n=nodes[ni];
+    html+='<span class="pnode" data-i="'+ni+'">'+n.n+'</span>';
+    if(k<r.es.length){
+      const e=links[r.es[k]];
+      const fwd=(e.s===ni);
+      html+='<span class="pedge">'+(fwd?('—'+e.p+'→'):('←'+e.p+'—'))+'</span>';
+    }
+  });
+  html+='</div>';
+  document.getElementById('dbody').innerHTML=html;
+  d.style.display='block';
+  d.querySelectorAll('.pnode').forEach(el=>el.onclick=()=>{
+    const j=+el.dataset.i; select(j); centerOn(j);
+  });
 }
 
 // 时间轴
@@ -646,16 +689,21 @@ function setChapter(v){
   draw();
 }
 chapEl.oninput=e=>setChapter(+e.target.value);
-let timer=null;
-document.getElementById('play').onclick=function(){
-  if(timer){ clearInterval(timer); timer=null; this.textContent='▶ 播放'; return; }
+let timer=null, speed=420;
+function tick(){
+  if(!timer) return;
+  const v = chap>=120?1:chap+1;
+  chapEl.value=v; setChapter(v);
+  timer=setTimeout(tick, speed);
+}
+const playBtn=document.getElementById('play');
+playBtn.onclick=function(){
+  if(timer){ clearTimeout(timer); timer=null; this.textContent='▶ 播放'; return; }
   this.textContent='❚❚ 暂停';
-  let v=chap;
-  timer=setInterval(()=>{
-    v = v>=120?1:v+1;
-    chapEl.value=v; setChapter(v);
-  },420);
+  tick();
 };
+const spd=document.getElementById('speed');
+if(spd) spd.onchange=e=>{ speed=+e.target.value; };
 document.getElementById('resetView').onclick=()=>{
   zoom.s=1; zoom.x=0; zoom.y=0;
   removed.clear(); commOff.clear(); pathA=pathB=-1; pathSeq=[]; pathSet=new Set();

@@ -138,11 +138,26 @@ NOT_PORTRAIT = {
     "东平王": "骑马雕像",
     "住儿": "纯文字占位图",
     "庆儿": "纯文字占位图",
+    # 第二轮：逐张目视复核后确认的“望文生义图”、书封与拼图
+    "鸳鸯": "鸳鸯戏水照片（望文生义）",
+    "彩凤": "鹦鹉照片（望文生义）",
+    "琥珀": "琥珀珠照片（望文生义）",
+    "李贵": "《红楼梦》书封",
+    "宋嬷嬷": "《红楼梦》书封",
+    "甄应嘉": "《红楼梦》书封",
+    "程日兴": "《红楼梦》书封",
+    "王子腾": "群马图（非人物）",
+    "载权": "女性绣像（图不对人）",
+    "邓好时": "女性绣像（图不对人）",
+    "彩儿": "四人拼图（非单人像）",
+    "侍画": "视频截图（多人同框）",
+    "蒋玉菡": "情节插画（非人物像）",
 }
 for i, r in im.iterrows():
     nm_ = pid_name.get(r["人物ID"])
     if nm_ in NOT_PORTRAIT:
-        im.at[i, "图像状态_清洗"] = "非人物像（%s）" % NOT_PORTRAIT[nm_]
+        im.at[i, "图像状态_清洗"] = "非人物像"
+        im.at[i, "图像校注"] = NOT_PORTRAIT[nm_]
         im.at[i, "图像文件"] = None
 
 persons = persons.drop(columns=[c for c in persons.columns if c.startswith("图像状态_清洗")],
@@ -173,4 +188,5 @@ print("特征表：", ft.shape, "列：", list(ft.columns))
 print(ft[["brightness", "saturation", "colorfulness", "edge_density"]].describe().round(3).to_string())
 json.dump([dict(md5=g[0], members=g[1], keeper=g[2]) for g in conflict_groups],
           open(PROC / "image_conflicts.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
 

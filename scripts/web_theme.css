@@ -145,3 +145,11 @@ footer{padding:48px 0 64px;color:var(--dim);font-size:15px;text-align:center;
   border-bottom:1px dashed rgba(228,217,198,.85);cursor:pointer;color:#4a443a}
 .relrow:hover{background:rgba(164,52,42,.06)}
 .relrow span{color:#9a6a32}
+
+/* 路径链 */
+.pathlist{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:8px;font-size:13px;line-height:1.9}
+.pnode{cursor:pointer;color:var(--red);border-bottom:1px dashed rgba(164,52,42,.45);padding:0 1px}
+.pnode:hover{background:rgba(164,52,42,.08)}
+.pedge{color:#9a6a32;font-size:12px;margin:0 2px}
+.timebar select{border:1px solid var(--line);background:#fbf8f1;color:#6f6657;border-radius:6px;
+  padding:2px 4px;font-size:12px;font-family:inherit;margin:0 4px}
