@@ -664,8 +664,9 @@ function showPath(r){
     html+='<span class="pnode" data-i="'+ni+'">'+n.n+'</span>';
     if(k<r.es.length){
       const e=links[r.es[k]];
-      const fwd=(e.s===ni);
-      html+='<span class="pedge">'+(fwd?('—'+e.p+'→'):('←'+e.p+'—'))+'</span>';
+      const SYM=new Set(['兄弟','姐妹','兄妹','表兄妹','朋友','私情','配偶','夫妻']);
+      const txt=SYM.has(e.p)?('—'+e.p+'—'):((e.s===ni)?('—'+e.p+'→'):('←'+e.p+'—'));
+      html+='<span class="pedge">'+txt+'</span>';
     }
   });
   html+='</div>';

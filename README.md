@@ -11,6 +11,10 @@
 |---|---|
 | ![交互网络](docs/screenshots/shot_graph.png) | ![结构分析](docs/screenshots/shot_structure.png) |
 
+**路径模式**：点两个人，自动找最短关系链并高亮，例如「林黛玉 —表兄妹— 贾宝玉 —朋友— 秦钟 —儿子→ 秦邦业 —养父→ 秦可卿」：
+
+![路径查找](docs/screenshots/shot_path.png)
+
 ![关系网络](figures/fig1_relation_network.png)
 
 ---
