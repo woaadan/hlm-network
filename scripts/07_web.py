@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
 import sys, io, json, math
 from pathlib import Path
@@ -762,6 +762,7 @@ html = (HTML.replace("__CSS__", (Path(__file__).with_name("web_theme.css")).read
 
 (DOCS / "index.html").write_text(html, encoding="utf-8")
 print("index.html 写入：", len(html) / 1024, "KB，节点", len(nodes), "关系边", len(links), "文本边", len(tl))
+
 
 
 
