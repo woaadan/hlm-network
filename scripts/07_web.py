@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """生成 docs/index.html：单文件交互式网络 + 图文报告。"""
 import sys, io, json, math
 from pathlib import Path
@@ -69,8 +69,7 @@ CAST = {int(k): [idx[x] for x in v if x in idx] for k, v in cast_raw.items()}
 
 DATA = dict(nodes=nodes, links=links, text=tl, cast=CAST,
             stats=dict(n=len(nodes), rel=len(links), text=len(tl),
-                       chapters=120, images=int((live["图像状态_清洗"].isin(
-                           ["正常", "别名同图", "占位（同图待核）"])).sum())))
+                       chapters=120, images=len(list((DOCS / "img").glob("*.jpg")))))
 
 ev = S["evidence"]
 a = S["authorship"]
